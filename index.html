@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NEON SWARM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=6">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div class="vignette"></div>
+
+    <!-- HUD -->
+    <div id="hud" style="display:none">
+        <div id="hud-top">
+            <div id="hp-wrap"><div id="hp-bar"></div><span id="hp-text"></span></div>
+            <div id="hud-center">
+                <div id="score-display">0</div>
+                <div id="timer">0:00</div>
+                <div id="best-score">BEST: 0</div>
+            </div>
+            <div id="kill-count">💀 0 KILLS</div>
+        </div>
+        <div id="weapon-icons"></div>
+    </div>
+    <div id="score-mult" style="display:none">x2 SCORE</div>
+
+    <!-- Combo Display -->
+    <div id="combo-display" style="opacity:0">
+        <div class="combo-count">0x</div>
+        <div class="combo-label">COMBO</div>
+        <div class="combo-bar"><div class="combo-fill" style="width:100%"></div></div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="overlay">
+        <div class="overlay-content">
+            <h1 class="title">NEON<br><span>SWARM</span></h1>
+            <p class="subtitle">Chase the high score</p>
+            <button class="glow-btn" id="play-btn"><span class="btn-shimmer"></span>▶ PLAY</button>
+            <div class="hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrow Keys to move &bull; Touch &amp; drag on mobile<br>Weapons fire automatically &bull; Collect glowing power-ups to get stronger</div>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameover-screen" class="overlay" style="display:none">
+        <div class="overlay-content">
+            <h2 class="gameover-title">GAME OVER</h2>
+            <div id="final-stats"></div>
+            <button class="glow-btn" id="retry-btn">↻ RETRY</button>
+        </div>
+    </div>
+
+    <!-- Boss Warning -->
+    <div id="boss-warning" style="display:none">⚠ BOSS INCOMING ⚠</div>
+
+    <script src="game.js?v=6"></script>
+</body>
+</html>
