@@ -1890,9 +1890,9 @@ function drawJoystick() {
     ctx.beginPath(); ctx.arc(joy.sx + joy.dx * 50, joy.sy + joy.dy * 50, 18, 0, TAU); ctx.fill();
     ctx.restore();
 }
-if (isMobile) return; // skip decorative gradient on mobile
-    
+
 function drawMagnetRange() {
+    if (isMobile) return; // skip decorative gradient on mobile
     const px = P.x - cam.x, py = P.y - cam.y;
     ctx.save();
     const mg = ctx.createRadialGradient(px, py, P.magnet * 0.7, px, py, P.magnet);
