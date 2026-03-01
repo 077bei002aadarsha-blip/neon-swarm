@@ -4,6 +4,10 @@
 // ║  Pure HTML5 Canvas + Vanilla JS — Zero dependencies         ║
 // ╚══════════════════════════════════════════════════════════════╝
 
+// ─── MOBILE DETECTION ────────────────────────────────────────
+const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+              || ('ontouchstart' in window && innerWidth < 1024);
+
 // ─── CONFIG ──────────────────────────────────────────────────
 // All tunable game constants in one place for easy balancing.
 const CFG = {
@@ -19,8 +23,8 @@ const CFG = {
     // Spawning
     BASE_SPAWN_RATE:   0.8,
     SPAWN_RATE_SCALE:  40,      // rate = BASE + gt / this
-    MAX_ENEMIES:       150,
-    ENEMY_CULL_DIST:   1200,
+    MAX_ENEMIES:       isMobile ? 60 : 150,
+    ENEMY_CULL_DIST:   isMobile ? 900 : 1200,
     FIRST_BOSS_TIME:   60,
     MIN_BOSS_INTERVAL: 30,
 
@@ -53,17 +57,17 @@ const CFG = {
     DROP_CHANCE_DEFAULT:   0.03,
 
     // Particles
-    MAX_PARTICLES:     200,
-    PARTS_HIT:         1,
-    PARTS_DEATH:       6,
-    PARTS_BOSS_DEATH:  20,
-    PARTS_PLAYER_DEATH: 20,
-    PARTS_HURT:        4,
-    PARTS_COLLECT_GEM: 2,
-    PARTS_COLLECT_PU:  8,
-    PARTS_EXPIRE_PU:   4,
-    PARTS_HEAL:        6,
-    PARTS_ORB_EXPIRE:  3,
+    MAX_PARTICLES:     isMobile ? 60 : 200,
+    PARTS_HIT:         isMobile ? 0  : 1,
+    PARTS_DEATH:       isMobile ? 3  : 6,
+    PARTS_BOSS_DEATH:  isMobile ? 10 : 20,
+    PARTS_PLAYER_DEATH: isMobile ? 10 : 20,
+    PARTS_HURT:        isMobile ? 2  : 4,
+    PARTS_COLLECT_GEM: isMobile ? 1  : 2,
+    PARTS_COLLECT_PU:  isMobile ? 4  : 8,
+    PARTS_EXPIRE_PU:   isMobile ? 2  : 4,
+    PARTS_HEAL:        isMobile ? 3  : 6,
+    PARTS_ORB_EXPIRE:  isMobile ? 1  : 3,
 
     // Combo
     COMBO_WINDOW:      180,     // 3 seconds at 60 fps
@@ -75,9 +79,9 @@ const CFG = {
     HEARTBEAT_INTERVAL: 50,
 
     // Visual
-    BG_STAR_COUNT:     180,
-    NEBULA_COUNT:      8,
-    DUST_COUNT:        60,
+    BG_STAR_COUNT:     isMobile ? 50  : 180,
+    NEBULA_COUNT:      isMobile ? 2   : 8,
+    DUST_COUNT:        isMobile ? 15  : 60,
 };
 
 // ─── CANVAS & UTILITIES ─────────────────────────────────────
@@ -85,7 +89,19 @@ const C   = document.getElementById('game');
 const ctx = C.getContext('2d');
 let W, H;
 
-function resize() { W = C.width = innerWidth; H = C.height = innerHeight; }
+// On mobile, cap DPR to 1 to avoid rendering millions of extra pixels.
+// On desktop, use native 1:1 (canvas already matches CSS pixels).
+const DPR = isMobile ? Math.min(devicePixelRatio, 1) : 1;
+
+function resize() {
+    W = innerWidth;
+    H = innerHeight;
+    C.width  = W * DPR;
+    C.height = H * DPR;
+    C.style.width  = W + 'px';
+    C.style.height = H + 'px';
+    if (DPR !== 1) ctx.scale(DPR, DPR);
+}
 addEventListener('resize', resize);
 resize();
 
@@ -813,7 +829,7 @@ function updateProjectiles() {
         p.y += p.vy;
 
         // Missile trail
-        if (p.type === 'missile' && frame % 2 === 0) {
+        if (p.type === 'missile' && frame % (isMobile ? 4 : 2) === 0) {
             parts.push({ x: p.x, y: p.y, vx: rand(-0.5, 0.5), vy: rand(-0.5, 0.5), life: 12, col: p.col, r: 2 });
         }
 
@@ -1239,8 +1255,8 @@ function drawBgStars() {
         ctx.arc(x, y, s.r, 0, TAU);
         ctx.fill();
 
-        // Cross flare on bright stars
-        if (s.r > 1.5) {
+        // Cross flare on bright stars (skip on mobile)
+        if (!isMobile && s.r > 1.5) {
             ctx.globalAlpha = alpha * 0.3;
             ctx.strokeStyle = s.col;
             ctx.lineWidth = 0.5;
@@ -1289,13 +1305,15 @@ function drawGrid() {
     for (let y = my; y < H; y += MAJ) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
     ctx.stroke();
 
-    // Grid glow near player
+    // Grid glow near player (skip on mobile)
+    if (!isMobile) {
     const px = P.x - cam.x, py = P.y - cam.y;
     const grad = ctx.createRadialGradient(px, py, 0, px, py, 160);
     grad.addColorStop(0, 'rgba(34,211,238,0.06)');
     grad.addColorStop(1, 'rgba(34,211,238,0)');
     ctx.fillStyle = grad;
     ctx.fillRect(px - 160, py - 160, 320, 320);
+    }
 }
 
 // ─── Player ─────────────────────────────────────────────────
@@ -1304,8 +1322,8 @@ function drawPlayer() {
     if (P.invuln > 0 && Math.floor(P.invuln / 3) % 2 === 0) return;
 
     const speed = Math.hypot(P.vx, P.vy);
-    const angle = Math.atan2(P.vy, P.vx);
-
+    const angle = M (skip on mobile)
+    if (!isMobile && 
     // Engine trail
     if (speed > 0.5) {
         ctx.save();
@@ -1329,13 +1347,12 @@ function drawPlayer() {
     const ringR = P.r + 8 + Math.sin(frame * 0.12) * 3;
     ctx.strokeStyle = '#22d3ee';
     ctx.lineWidth = 1.5;
-    ctx.shadowColor = '#22d3ee';
-    ctx.shadowBlur = 15;
+    if (!isMobile) { ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 15; }
     ctx.beginPath(); ctx.arc(sx, sy, ringR, 0, TAU); ctx.stroke();
     ctx.restore();
 
-    // Speed aura
-    if (speed > 1) {
+    // Speed aura (skip on mobile for perf)
+    if (!isMobile && speed > 1) {
         ctx.save();
         const aGrad = ctx.createRadialGradient(sx, sy, P.r, sx, sy, P.r + 18);
         aGrad.addColorStop(0, 'rgba(34,211,238,0.15)');
@@ -1347,8 +1364,7 @@ function drawPlayer() {
 
     // Body
     ctx.save();
-    ctx.shadowColor = '#22d3ee';
-    ctx.shadowBlur = 30;
+    if (!isMobile) { ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 30; }
     const bGrad = ctx.createRadialGradient(sx - 3, sy - 3, 0, sx, sy, P.r);
     bGrad.addColorStop(0,   '#fff');
     bGrad.addColorStop(0.3, '#67e8f9');
@@ -1404,7 +1420,8 @@ function drawOrbiters() {
             const bx = P.x + Math.cos(a) * rad - cam.x;
             const by = P.y + Math.sin(a) * rad - cam.y;
 
-            // Motion trail
+            // Motion trail (skip on mobile)
+            if (!isMobile) {
             ctx.save();
             ctx.globalAlpha = 0.15;
             const prevA = a - def.spd[lv] * 5;
@@ -1415,13 +1432,13 @@ function drawOrbiters() {
             ctx.lineCap = 'round';
             ctx.beginPath(); ctx.moveTo(pbx, pby); ctx.lineTo(bx, by); ctx.stroke();
             ctx.restore();
+            }
 
             // Diamond blade
             ctx.save();
             ctx.translate(bx, by);
             ctx.rotate(a + frame * 0.15);
-            ctx.shadowColor = def.col;
-            ctx.shadowBlur = 18;
+            if (!isMobile) { ctx.shadowColor = def.col; ctx.shadowBlur = 18; }
             ctx.fillStyle = def.col;
             ctx.beginPath();
             ctx.moveTo(0, -12); ctx.lineTo(6, 0); ctx.lineTo(0, 12); ctx.lineTo(-6, 0);
@@ -1444,8 +1461,8 @@ function drawEnemies() {
         ctx.save();
         let r = e.r;
 
-        // Threat aura
-        if (e.type === 'boss' || e.type === 'brute') {
+        // Threat aura (skip on mobile)
+        if (!isMobile && (e.type === 'boss' || e.type === 'brute')) {
             ctx.globalAlpha = 0.12;
             ctx.strokeStyle = e.col;
             ctx.lineWidth = 2;
@@ -1455,8 +1472,7 @@ function drawEnemies() {
 
         // Boss glow
         if (e.type === 'boss') {
-            ctx.shadowColor = e.hit > 0 ? '#fff' : e.col;
-            ctx.shadowBlur = e.hit > 0 ? 18 : 8;
+            if (!isMobile) { ctx.shadowColor = e.hit > 0 ? '#fff' : e.col; ctx.shadowBlur = e.hit > 0 ? 18 : 8; }
             r += Math.sin(frame * 0.05) * 3;
         }
 
@@ -1545,8 +1561,7 @@ function drawEnemies() {
             const hpPct = clamp(e.hp / e.maxHp, 0, 1);
             const barCol = hpPct > 0.5 ? e.col : (hpPct > 0.25 ? '#f97316' : '#ef4444');
             ctx.fillStyle = barCol;
-            ctx.shadowColor = barCol;
-            ctx.shadowBlur = 8;
+            if (!isMobile) { ctx.shadowColor = barCol; ctx.shadowBlur = 8; }
             ctx.beginPath(); ctx.roundRect(sx - bw / 2 + 1, sy - r - 17, (bw - 2) * hpPct, bh - 2, 2); ctx.fill();
         }
 
@@ -1567,13 +1582,15 @@ function drawProjectiles() {
         ctx.rotate(a);
 
         if (p.type === 'missile') {
-            // Engine glow
+            // Engine glow (skip gradient on mobile)
+            if (!isMobile) {
             ctx.globalAlpha = 0.25;
             const eGrad = ctx.createRadialGradient(-6, 0, 0, -6, 0, 10);
             eGrad.addColorStop(0, p.col);
             eGrad.addColorStop(1, 'transparent');
             ctx.fillStyle = eGrad;
             ctx.beginPath(); ctx.arc(-6, 0, 10, 0, TAU); ctx.fill();
+            }
 
             ctx.globalAlpha = 1;
             ctx.fillStyle = p.col;
@@ -1638,12 +1655,14 @@ function drawHealthOrbs() {
         const pulse = 1 + Math.sin(h.pulse) * 0.15;
         const r = h.r * pulse;
 
-        // Flash when expiring
-        if (h.life < 120 && Math.floor(h.life / 6) % 2 === 0) continue;
-
-        // Ground glow
+        // Flash when  (skip on mobile)
+        if (!isMobile) {
         ctx.save();
         ctx.globalAlpha = 0.15;
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath(); ctx.arc(sx, sy, r * 3, 0, TAU); ctx.fill();
+        ctx.restore();
+        }a = 0.15;
         ctx.fillStyle = '#ef4444';
         ctx.beginPath(); ctx.arc(sx, sy, r * 3, 0, TAU); ctx.fill();
         ctx.restore();
@@ -1688,18 +1707,22 @@ function drawPowerUps() {
         // Ground ring
         ctx.globalAlpha = 0.15 + Math.sin(pu.pulse) * 0.05;
         ctx.strokeStyle = pu.col;
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.ellipse(sx, pu.y - cam.y + 12, r * 1.8, r * 0.6, 0, 0, TAU); ctx.stroke();
-
-        // Ground glow
+        ctx.lineWidth  (skip on mobile)
+        if (!isMobile) {
         ctx.globalAlpha = 0.1;
         ctx.fillStyle = pu.col;
         ctx.beginPath(); ctx.arc(sx, sy, r * 2.5, 0, TAU); ctx.fill();
+        }
 
-        // Light beam
+        // Light beam (skip on mobile)
+        if (!isMobile) {
         ctx.globalAlpha = 0.06 + Math.sin(pu.pulse * 2) * 0.03;
         ctx.fillStyle = pu.col;
         ctx.beginPath();
+        ctx.moveTo(sx - 3, sy - 60); ctx.lineTo(sx + 3, sy - 60);
+        ctx.lineTo(sx + r * 0.8, sy + 8); ctx.lineTo(sx - r * 0.8, sy + 8);
+        ctx.fill();
+        }th();
         ctx.moveTo(sx - 3, sy - 60); ctx.lineTo(sx + 3, sy - 60);
         ctx.lineTo(sx + r * 0.8, sy + 8); ctx.lineTo(sx - r * 0.8, sy + 8);
         ctx.fill();
@@ -1725,8 +1748,8 @@ function drawPowerUps() {
         // Label
         ctx.font = "bold 9px 'Orbitron', sans-serif";
         ctx.fillStyle = pu.col;
-        ctx.globalAlpha = 0.8;
-        ctx.fillText(pu.label, sx, sy + r + 14);
+        ctx.globalAlpha  (skip on mobile)
+        if (!isMobile && fillText(pu.label, sx, sy + r + 14);
 
         // Epic sparkles
         if (pu.rarity === 'epic') {
@@ -1790,9 +1813,8 @@ function drawLightning() {
         // Glow layer
         ctx.globalAlpha = alpha * 0.3;
         ctx.strokeStyle = l.col;
-        ctx.shadowColor = l.col;
-        ctx.shadowBlur = 25;
-        ctx.lineWidth = 8;
+        if (!isMobile) { ctx.shadowColor = l.col; ctx.shadowBlur = 25; }
+        ctx.lineWidth = isMobile ? 4 : 8;
         ctx.lineCap = 'round';
         ctx.beginPath();
         for (let i = 0; i < l.points.length; i++) {
@@ -1844,8 +1866,7 @@ function drawNovas() {
 
         ctx.globalAlpha = alpha;
         ctx.strokeStyle = n.col;
-        ctx.shadowColor = n.col;
-        ctx.shadowBlur = 25;
+        if (!isMobile) { ctx.shadowColor = n.col; ctx.shadowBlur = 25; }
         ctx.lineWidth = 4 * alpha + 1;
         ctx.beginPath(); ctx.arc(sx, sy, n.r, 0, TAU); ctx.stroke();
 
@@ -1869,7 +1890,8 @@ function drawJoystick() {
     ctx.beginPath(); ctx.arc(joy.sx + joy.dx * 50, joy.sy + joy.dy * 50, 18, 0, TAU); ctx.fill();
     ctx.restore();
 }
-
+if (isMobile) return; // skip decorative gradient on mobile
+    
 function drawMagnetRange() {
     const px = P.x - cam.x, py = P.y - cam.y;
     ctx.save();
