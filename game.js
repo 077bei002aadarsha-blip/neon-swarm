@@ -1655,17 +1655,17 @@ function drawHealthOrbs() {
         const pulse = 1 + Math.sin(h.pulse) * 0.15;
         const r = h.r * pulse;
 
-        // Flash when  (skip on mobile)
+        // Flash when expiring
+        if (h.life < 120 && Math.floor(h.life / 6) % 2 === 0) continue;
+
+        // Ground glow (skip on mobile)
         if (!isMobile) {
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath(); ctx.arc(sx, sy, r * 3, 0, TAU); ctx.fill();
-        ctx.restore();
-        }a = 0.15;
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath(); ctx.arc(sx, sy, r * 3, 0, TAU); ctx.fill();
-        ctx.restore();
+            ctx.save();
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath(); ctx.arc(sx, sy, r * 3, 0, TAU); ctx.fill();
+            ctx.restore();
+        }
 
         ctx.save();
         ctx.fillStyle = '#dc2626';
@@ -1707,25 +1707,25 @@ function drawPowerUps() {
         // Ground ring
         ctx.globalAlpha = 0.15 + Math.sin(pu.pulse) * 0.05;
         ctx.strokeStyle = pu.col;
-        ctx.lineWidth  (skip on mobile)
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(sx, pu.y - cam.y + 12, r * 1.8, r * 0.6, 0, 0, TAU); ctx.stroke();
+
+        // Ground glow (skip on mobile)
         if (!isMobile) {
-        ctx.globalAlpha = 0.1;
-        ctx.fillStyle = pu.col;
-        ctx.beginPath(); ctx.arc(sx, sy, r * 2.5, 0, TAU); ctx.fill();
+            ctx.globalAlpha = 0.1;
+            ctx.fillStyle = pu.col;
+            ctx.beginPath(); ctx.arc(sx, sy, r * 2.5, 0, TAU); ctx.fill();
         }
 
         // Light beam (skip on mobile)
         if (!isMobile) {
-        ctx.globalAlpha = 0.06 + Math.sin(pu.pulse * 2) * 0.03;
-        ctx.fillStyle = pu.col;
-        ctx.beginPath();
-        ctx.moveTo(sx - 3, sy - 60); ctx.lineTo(sx + 3, sy - 60);
-        ctx.lineTo(sx + r * 0.8, sy + 8); ctx.lineTo(sx - r * 0.8, sy + 8);
-        ctx.fill();
-        }th();
-        ctx.moveTo(sx - 3, sy - 60); ctx.lineTo(sx + 3, sy - 60);
-        ctx.lineTo(sx + r * 0.8, sy + 8); ctx.lineTo(sx - r * 0.8, sy + 8);
-        ctx.fill();
+            ctx.globalAlpha = 0.06 + Math.sin(pu.pulse * 2) * 0.03;
+            ctx.fillStyle = pu.col;
+            ctx.beginPath();
+            ctx.moveTo(sx - 3, sy - 60); ctx.lineTo(sx + 3, sy - 60);
+            ctx.lineTo(sx + r * 0.8, sy + 8); ctx.lineTo(sx - r * 0.8, sy + 8);
+            ctx.fill();
+        }
 
         // Orb
         ctx.globalAlpha = 1;
@@ -1748,11 +1748,11 @@ function drawPowerUps() {
         // Label
         ctx.font = "bold 9px 'Orbitron', sans-serif";
         ctx.fillStyle = pu.col;
-        ctx.globalAlpha  (skip on mobile)
-        if (!isMobile && fillText(pu.label, sx, sy + r + 14);
+        ctx.globalAlpha = 0.8;
+        ctx.fillText(pu.label, sx, sy + r + 14);
 
-        // Epic sparkles
-        if (pu.rarity === 'epic') {
+        // Epic sparkles (skip on mobile)
+        if (!isMobile && pu.rarity === 'epic') {
             ctx.globalAlpha = 0.3 + Math.sin(pu.pulse * 3) * 0.2;
             ctx.fillStyle = '#fff';
             for (let i = 0; i < 4; i++) {
