@@ -1322,10 +1322,10 @@ function drawPlayer() {
     if (P.invuln > 0 && Math.floor(P.invuln / 3) % 2 === 0) return;
 
     const speed = Math.hypot(P.vx, P.vy);
-    const angle = M (skip on mobile)
-    if (!isMobile && 
-    // Engine trail
-    if (speed > 0.5) {
+    const angle = Math.atan2(P.vy, P.vx);
+
+    // Engine trail (skip on mobile)
+    if (!isMobile && speed > 0.5) {
         ctx.save();
         const trailLen = speed * 6;
         const tx = sx - Math.cos(angle) * trailLen;
