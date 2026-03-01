@@ -98,7 +98,16 @@ Everything else is automatic.
 
 ## 📸 Screenshots
 
-*Coming soon — screenshots and GIFs of gameplay.*
+### Start Screen
+![Menu](screenshots/menu.png)
+
+### Gameplay
+![Gameplay](screenshots/gameplay.png)
+
+![Gameplay 2](screenshots/gameplay2.png)
+
+### Game Over
+![Game Over](screenshots/gameover.png)
 
 ## 🛠 Technical Highlights
 
