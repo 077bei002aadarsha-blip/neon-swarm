@@ -476,8 +476,10 @@ function buildSkinPicker() {
     let html = '';
     SKINS.forEach((skin, i) => {
         const sel = i === selectedSkin ? ' selected' : '';
-        html += `<div class="skin-opt${sel}" data-skin="${i}" style="--skin-col:${skin.body}">
-            <div class="skin-circle" style="background:radial-gradient(circle at 35% 35%, #fff, ${skin.light}, ${skin.body}, ${skin.dark})"></div>
+        const r = parseInt(skin.body.slice(1,3),16), g = parseInt(skin.body.slice(3,5),16), b = parseInt(skin.body.slice(5,7),16);
+        const glow = `rgba(${r},${g},${b},0.35)`;
+        html += `<div class="skin-opt${sel}" data-skin="${i}" style="--skin-col:${skin.body};--skin-glow:${glow}">
+            <div class="skin-ring"><div class="skin-circle" style="background:radial-gradient(circle at 35% 35%, #fff, ${skin.light}, ${skin.body}, ${skin.dark})"></div></div>
             <span class="skin-name">${skin.name}</span>
         </div>`;
     });
