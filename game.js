@@ -181,6 +181,193 @@ function shuffle(arr) {
     }
 }
 
+/** Draw a geometric icon shape on canvas (replaces unreliable Unicode). */
+function drawIconShape(x, y, type, r, col) {
+    ctx.save();
+    ctx.fillStyle = col || '#fff';
+    ctx.strokeStyle = col || '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    switch (type) {
+        case 'orbiter': // crossed swords → spinning X
+            ctx.beginPath();
+            ctx.moveTo(x - r, y - r); ctx.lineTo(x + r, y + r);
+            ctx.moveTo(x + r, y - r); ctx.lineTo(x - r, y + r);
+            ctx.stroke();
+            ctx.beginPath(); ctx.arc(x, y, r * 0.25, 0, TAU); ctx.fill();
+            break;
+        case 'bolt': // diamond
+            ctx.beginPath();
+            ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.6, y);
+            ctx.lineTo(x, y + r); ctx.lineTo(x - r * 0.6, y);
+            ctx.closePath(); ctx.fill();
+            break;
+        case 'nova': // starburst
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const a = (TAU / 8) * i - PI / 2;
+                const rr = i % 2 === 0 ? r : r * 0.45;
+                i === 0 ? ctx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr)
+                        : ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+            }
+            ctx.closePath(); ctx.fill();
+            break;
+        case 'lightning': // zigzag bolt
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x - r * 0.2, y - r);
+            ctx.lineTo(x + r * 0.4, y - r * 0.2);
+            ctx.lineTo(x - r * 0.15, y + r * 0.1);
+            ctx.lineTo(x + r * 0.3, y + r);
+            ctx.stroke();
+            break;
+        case 'missile': // arrow/rocket
+            ctx.beginPath();
+            ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.5, y + r * 0.4);
+            ctx.lineTo(x + r * 0.15, y + r * 0.2);
+            ctx.lineTo(x + r * 0.15, y + r);
+            ctx.lineTo(x - r * 0.15, y + r);
+            ctx.lineTo(x - r * 0.15, y + r * 0.2);
+            ctx.lineTo(x - r * 0.5, y + r * 0.4);
+            ctx.closePath(); ctx.fill();
+            break;
+        case 'scatter': // three dots spread
+            for (let i = -1; i <= 1; i++) {
+                ctx.beginPath();
+                ctx.arc(x + i * r * 0.55, y + Math.abs(i) * r * 0.3, r * 0.25, 0, TAU);
+                ctx.fill();
+            }
+            break;
+        case 'pierce': // right-pointing triangle
+            ctx.beginPath();
+            ctx.moveTo(x + r, y); ctx.lineTo(x - r * 0.6, y - r * 0.7);
+            ctx.lineTo(x - r * 0.6, y + r * 0.7); ctx.closePath(); ctx.fill();
+            break;
+        case 'rapid': // triple dots
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.arc(x, y + (i - 1) * r * 0.65, r * 0.25, 0, TAU); ctx.fill();
+            }
+            break;
+        case 'hp': // heart
+            ctx.beginPath();
+            const hr = r * 0.55;
+            ctx.moveTo(x, y + r * 0.6);
+            ctx.bezierCurveTo(x - r, y, x - r, y - r * 0.7, x, y - r * 0.3);
+            ctx.bezierCurveTo(x + r, y - r * 0.7, x + r, y, x, y + r * 0.6);
+            ctx.fill();
+            break;
+        case 'spd': // speed arrows
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x - r * 0.4, y + r * 0.3); ctx.lineTo(x + r * 0.5, y); ctx.lineTo(x - r * 0.4, y - r * 0.3);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x - r * 0.8, y + r * 0.3); ctx.lineTo(x + r * 0.1, y); ctx.lineTo(x - r * 0.8, y - r * 0.3);
+            ctx.stroke();
+            break;
+        case 'dmg': // up arrow (power)
+            ctx.beginPath();
+            ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.6, y + r * 0.1);
+            ctx.lineTo(x + r * 0.2, y + r * 0.1); ctx.lineTo(x + r * 0.2, y + r);
+            ctx.lineTo(x - r * 0.2, y + r); ctx.lineTo(x - r * 0.2, y + r * 0.1);
+            ctx.lineTo(x - r * 0.6, y + r * 0.1);
+            ctx.closePath(); ctx.fill();
+            break;
+        case 'magnet': // U-shape magnet
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(x, y + r * 0.1, r * 0.5, PI, 0);
+            ctx.moveTo(x + r * 0.5, y + r * 0.1); ctx.lineTo(x + r * 0.5, y - r * 0.6);
+            ctx.moveTo(x - r * 0.5, y + r * 0.1); ctx.lineTo(x - r * 0.5, y - r * 0.6);
+            ctx.stroke();
+            break;
+        case 'score': // coin / dollar
+            ctx.beginPath(); ctx.arc(x, y, r * 0.7, 0, TAU); ctx.fill();
+            ctx.fillStyle = '#060612'; ctx.font = `bold ${Math.round(r)}px 'Orbitron',sans-serif`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('$', x, y + 1);
+            break;
+        default: // fallback circle
+            ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+}
+
+/** Draw icon on a small HUD canvas (separate context). */
+function drawIconOnMini(mCtx, type, x, y, r, col) {
+    mCtx.clearRect(0, 0, 28, 28);
+    mCtx.fillStyle = col;
+    mCtx.strokeStyle = col;
+    mCtx.lineWidth = 1.5;
+    mCtx.lineCap = 'round';
+    mCtx.lineJoin = 'round';
+    const T = Math.PI * 2;
+    switch (type) {
+        case 'orbiter':
+            mCtx.beginPath();
+            mCtx.moveTo(x - r, y - r); mCtx.lineTo(x + r, y + r);
+            mCtx.moveTo(x + r, y - r); mCtx.lineTo(x - r, y + r);
+            mCtx.stroke();
+            mCtx.beginPath(); mCtx.arc(x, y, r * 0.25, 0, T); mCtx.fill();
+            break;
+        case 'bolt':
+            mCtx.beginPath();
+            mCtx.moveTo(x, y - r); mCtx.lineTo(x + r * 0.6, y);
+            mCtx.lineTo(x, y + r); mCtx.lineTo(x - r * 0.6, y);
+            mCtx.closePath(); mCtx.fill();
+            break;
+        case 'nova':
+            mCtx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const a = (T / 8) * i - Math.PI / 2;
+                const rr = i % 2 === 0 ? r : r * 0.45;
+                i === 0 ? mCtx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr)
+                        : mCtx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+            }
+            mCtx.closePath(); mCtx.fill();
+            break;
+        case 'lightning':
+            mCtx.lineWidth = 2;
+            mCtx.beginPath();
+            mCtx.moveTo(x - r * 0.2, y - r);
+            mCtx.lineTo(x + r * 0.4, y - r * 0.2);
+            mCtx.lineTo(x - r * 0.15, y + r * 0.1);
+            mCtx.lineTo(x + r * 0.3, y + r);
+            mCtx.stroke();
+            break;
+        case 'missile':
+            mCtx.beginPath();
+            mCtx.moveTo(x, y - r); mCtx.lineTo(x + r * 0.5, y + r * 0.4);
+            mCtx.lineTo(x + r * 0.15, y + r * 0.2); mCtx.lineTo(x + r * 0.15, y + r);
+            mCtx.lineTo(x - r * 0.15, y + r); mCtx.lineTo(x - r * 0.15, y + r * 0.2);
+            mCtx.lineTo(x - r * 0.5, y + r * 0.4);
+            mCtx.closePath(); mCtx.fill();
+            break;
+        case 'scatter':
+            for (let i = -1; i <= 1; i++) {
+                mCtx.beginPath();
+                mCtx.arc(x + i * r * 0.55, y + Math.abs(i) * r * 0.3, r * 0.25, 0, T);
+                mCtx.fill();
+            }
+            break;
+        case 'pierce':
+            mCtx.beginPath();
+            mCtx.moveTo(x + r, y); mCtx.lineTo(x - r * 0.6, y - r * 0.7);
+            mCtx.lineTo(x - r * 0.6, y + r * 0.7); mCtx.closePath(); mCtx.fill();
+            break;
+        case 'rapid':
+            for (let i = 0; i < 3; i++) {
+                mCtx.beginPath();
+                mCtx.arc(x, y + (i - 1) * r * 0.65, r * 0.25, 0, T); mCtx.fill();
+            }
+            break;
+        default:
+            mCtx.beginPath(); mCtx.arc(x, y, r * 0.5, 0, T); mCtx.fill();
+    }
+}
+
 // ─── WEAPON DEFINITIONS (5 levels each, index 0-4) ──────────
 const WDEFS = {
     orbiter: {
@@ -1087,7 +1274,7 @@ function generatePowerUpItem() {
     for (const key in WDEFS) {
         if (!owned.has(key)) {
             const def  = WDEFS[key];
-            const item = { kind: 'new', weapon: key, label: def.name, icon: def.icon, col: def.col, rarity: 'epic' };
+            const item = { kind: 'new', weapon: key, label: def.name, col: def.col, rarity: 'epic' };
             pool.push(item, { ...item });
         }
     }
@@ -1096,20 +1283,20 @@ function generatePowerUpItem() {
     for (const w of weapons) {
         if (w.lv < 4) {
             const def = WDEFS[w.type];
-            pool.push({ kind: 'upgrade', weapon: w.type, label: def.name + ' ↑', icon: def.icon, col: def.col, rarity: 'rare' });
+            pool.push({ kind: 'upgrade', weapon: w.type, label: def.name + ' ↑', col: def.col, rarity: 'rare' });
         }
     }
 
     // Stat boosts
     pool.push(
-        { kind: 'stat', stat: 'maxHp',   label: '+HP',  icon: '❤', col: '#ef4444', rarity: 'common' },
-        { kind: 'stat', stat: 'spd',     label: '+SPD', icon: '⚡', col: '#38bdf8', rarity: 'common' },
-        { kind: 'stat', stat: 'dmgMult', label: '+DMG', icon: '💪', col: '#f97316', rarity: 'common' },
-        { kind: 'stat', stat: 'magnet',  label: '+MAG', icon: '🧲', col: '#a855f7', rarity: 'common' },
+        { kind: 'stat', stat: 'maxHp',   label: '+HP',  iconType: 'hp',     col: '#ef4444', rarity: 'common' },
+        { kind: 'stat', stat: 'spd',     label: '+SPD', iconType: 'spd',    col: '#38bdf8', rarity: 'common' },
+        { kind: 'stat', stat: 'dmgMult', label: '+DMG', iconType: 'dmg',    col: '#f97316', rarity: 'common' },
+        { kind: 'stat', stat: 'magnet',  label: '+MAG', iconType: 'magnet', col: '#a855f7', rarity: 'common' },
     );
 
     // Score multiplier
-    pool.push({ kind: 'score', label: 'x2 PTS', icon: '💰', col: '#fbbf24', rarity: 'rare' });
+    pool.push({ kind: 'score', label: 'x2 PTS', iconType: 'score', col: '#fbbf24', rarity: 'rare' });
 
     shuffle(pool);
     return pool[0];
@@ -1297,13 +1484,19 @@ function updateHUD() {
         }
     }
 
-    // Weapon icons
+    // Weapon icons (canvas-based SVG inline)
     let html = '';
     for (const w of weapons) {
         const def = WDEFS[w.type];
-        html += `<div class="weapon-icon" style="border-color:${def.col};box-shadow:0 0 10px ${def.col}33">${def.icon}<span class="wlv">${w.lv + 1}</span></div>`;
+        html += `<div class="weapon-icon" style="border-color:${def.col};box-shadow:0 0 10px ${def.col}33"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="28" height="28"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
     }
     $wIcons.innerHTML = html;
+    // Draw icons on mini canvases
+    $wIcons.querySelectorAll('.wicon-cvs').forEach(cvs => {
+        const mCtx = cvs.getContext('2d');
+        const t = cvs.dataset.type, c = cvs.dataset.col;
+        drawIconOnMini(mCtx, t, 14, 14, 9, c);
+    });
 }
 
 // ─── MAIN UPDATE ────────────────────────────────────────────
@@ -1890,12 +2083,10 @@ function drawPowerUps() {
         ctx.beginPath(); ctx.arc(sx - 2, sy - 2, r * 0.4, 0, TAU); ctx.fill();
         ctx.globalAlpha = 1;
 
-        // Icon
+        // Icon (canvas-drawn shape)
         ctx.shadowBlur = 0;
-        ctx.font = `${Math.round(r * 1.1)}px 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(pu.icon, sx, sy);
+        const iconType = pu.iconType || pu.weapon || 'default';
+        drawIconShape(sx, sy, iconType, r * 0.55, '#fff');
 
         // Label
         ctx.font = "bold 9px 'Orbitron', sans-serif";
