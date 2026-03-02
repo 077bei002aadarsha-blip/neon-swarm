@@ -8,6 +8,17 @@
 const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
               || ('ontouchstart' in window && innerWidth < 1024);
 
+// ─── SKIN COLORS ─────────────────────────────────────────────
+const SKINS = [
+    { name: 'Cyan',   body: '#22d3ee', light: '#67e8f9', dark: '#0284c7', glow: '#22d3ee' },
+    { name: 'Pink',   body: '#f472b6', light: '#f9a8d4', dark: '#be185d', glow: '#f472b6' },
+    { name: 'Gold',   body: '#fbbf24', light: '#fde68a', dark: '#b45309', glow: '#fbbf24' },
+    { name: 'Green',  body: '#34d399', light: '#6ee7b7', dark: '#059669', glow: '#34d399' },
+    { name: 'Purple', body: '#a78bfa', light: '#c4b5fd', dark: '#6d28d9', glow: '#a78bfa' },
+    { name: 'Red',    body: '#ef4444', light: '#fca5a5', dark: '#991b1b', glow: '#ef4444' },
+];
+let selectedSkin = 0;
+
 // ─── CONFIG ──────────────────────────────────────────────────
 // All tunable game constants in one place for easy balancing.
 const CFG = {
@@ -112,6 +123,10 @@ const randInt = (a, b) => Math.floor(rand(a, b + 1));
 const dist  = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const lerp  = (a, b, t) => a + (b - a) * t;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function hexRgba(hex, a) {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+}
 
 /** Find the k nearest entities in `arr` relative to `from` — O(n·k). */
 function findNearest(arr, from, k) {
@@ -193,6 +208,21 @@ const WDEFS = {
         dmg: [30, 45, 64, 88, 120], cnt: [1, 2, 2, 3, 4],
         spd: [3.2, 3.6, 4, 4.5, 5], cd: [100, 85, 70, 55, 40],
     },
+    scatter: {
+        name: 'Scatter Shot', desc: 'Fires bolts in a spread', icon: '✦', col: '#fb923c',
+        dmg: [10, 15, 22, 30, 42], cnt: [3, 4, 5, 5, 7],
+        spd: [7, 8, 8, 9, 10], cd: [40, 35, 30, 25, 20], spread: 0.35,
+    },
+    pierce: {
+        name: 'Pierce Bolt', desc: 'Bolts pierce through enemies', icon: '▸', col: '#818cf8',
+        dmg: [22, 35, 50, 68, 90], cnt: [1, 1, 2, 2, 3],
+        spd: [10, 11, 12, 13, 14], cd: [45, 40, 35, 30, 25],
+    },
+    rapid: {
+        name: 'Rapid Fire', desc: 'Very fast low-damage bolts', icon: '●', col: '#4ade80',
+        dmg: [8, 12, 16, 20, 26], cnt: [1, 2, 2, 3, 3],
+        spd: [9, 10, 11, 12, 13], cd: [12, 10, 8, 7, 6],
+    },
 };
 
 // ─── ENEMY DEFINITIONS ──────────────────────────────────────
@@ -205,7 +235,7 @@ const EDEFS = {
 };
 
 // ─── GAME STATE ─────────────────────────────────────────────
-let state = 'menu'; // 'menu' | 'play' | 'dead'
+let state = 'menu'; // 'menu' | 'lobby' | 'play' | 'paused' | 'dead'
 let frame = 0, gt = 0, spawnAcc = 0, nextBoss = CFG.FIRST_BOSS_TIME;
 let score = 0, kills = 0, best = +(localStorage.getItem('ns_best') || 0);
 let shake = 0, flashAlpha = 0, freezeFrames = 0;
@@ -235,6 +265,9 @@ const $startScreen    = $('start-screen');
 const $gameoverScreen = $('gameover-screen');
 const $finalStats     = $('final-stats');
 const $bossWarn       = $('boss-warning');
+const $lobbyScreen    = $('lobby-screen');
+const $pauseScreen    = $('pause-screen');
+const $skinPicker     = $('skin-picker');
 const $comboDisplay   = $('combo-display');
 const $comboCount     = document.querySelector('#combo-display .combo-count');
 const $comboFill      = document.querySelector('#combo-display .combo-fill');
@@ -243,7 +276,13 @@ const $comboFill      = document.querySelector('#combo-display .combo-fill');
 const keys = {};
 const joy  = { active: false, id: -1, sx: 0, sy: 0, dx: 0, dy: 0 };
 
-addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+addEventListener('keydown', e => {
+    keys[e.key.toLowerCase()] = true;
+    if (e.key === 'Escape') {
+        if (state === 'play') togglePause(true);
+        else if (state === 'paused') togglePause(false);
+    }
+});
 addEventListener('keyup',   e => { keys[e.key.toLowerCase()] = false; });
 
 C.addEventListener('touchstart', e => {
@@ -402,19 +441,67 @@ function initGame() {
     lastScore = 0; heartbeatTimer = 0;
 }
 
+function showLobby() {
+    state = 'lobby';
+    $startScreen.style.display = 'none';
+    $gameoverScreen.style.display = 'none';
+    $lobbyScreen.style.display = '';
+    buildSkinPicker();
+}
+
 function startGame() {
     initGame();
     state = 'play';
+    $lobbyScreen.style.display = 'none';
     $startScreen.style.display = 'none';
     $gameoverScreen.style.display = 'none';
+    $pauseScreen.style.display = 'none';
     $hud.style.display = '';
     $bestScore.textContent = 'BEST: ' + best.toLocaleString();
     startAmbientDrone();
     if (actx && actx.state === 'suspended') actx.resume();
 }
 
-$('play-btn').onclick  = startGame;
-$('retry-btn').onclick = startGame;
+function togglePause(pause) {
+    if (pause && state === 'play') {
+        state = 'paused';
+        $pauseScreen.style.display = '';
+    } else if (!pause && state === 'paused') {
+        state = 'play';
+        $pauseScreen.style.display = 'none';
+    }
+}
+
+function buildSkinPicker() {
+    let html = '';
+    SKINS.forEach((skin, i) => {
+        const sel = i === selectedSkin ? ' selected' : '';
+        html += `<div class="skin-opt${sel}" data-skin="${i}" style="--skin-col:${skin.body}">
+            <div class="skin-circle" style="background:radial-gradient(circle at 35% 35%, #fff, ${skin.light}, ${skin.body}, ${skin.dark})"></div>
+            <span class="skin-name">${skin.name}</span>
+        </div>`;
+    });
+    $skinPicker.innerHTML = html;
+    $skinPicker.querySelectorAll('.skin-opt').forEach(el => {
+        el.onclick = () => {
+            selectedSkin = +el.dataset.skin;
+            $skinPicker.querySelectorAll('.skin-opt').forEach(e => e.classList.remove('selected'));
+            el.classList.add('selected');
+        };
+    });
+}
+
+$('play-btn').onclick   = showLobby;
+$('retry-btn').onclick  = showLobby;
+$('start-btn').onclick  = startGame;
+$('resume-btn').onclick = () => togglePause(false);
+$('pause-btn').onclick  = () => { if (state === 'play') togglePause(true); else if (state === 'paused') togglePause(false); };
+$('quit-btn').onclick   = () => {
+    state = 'menu';
+    $pauseScreen.style.display = 'none';
+    $hud.style.display = 'none';
+    $startScreen.style.display = '';
+};
 
 // ─── PLAYER ─────────────────────────────────────────────────
 function updatePlayer() {
@@ -537,6 +624,68 @@ function updateWeapons() {
                             spd: def.spd[lv], type: 'missile',
                         });
                     }
+                }
+                break;
+
+            case 'scatter':
+                if (--w.timer <= 0 && enemies.length > 0) {
+                    w.timer = def.cd[lv];
+                    const tgt = findNearest(enemies, P, 1)[0];
+                    if (tgt) {
+                        const baseA = Math.atan2(tgt.y - P.y, tgt.x - P.x);
+                        const cnt = def.cnt[lv];
+                        const half = (cnt - 1) / 2;
+                        for (let i = 0; i < cnt; i++) {
+                            const a = baseA + (i - half) * def.spread;
+                            projs.push({
+                                x: P.x, y: P.y,
+                                vx: Math.cos(a) * def.spd[lv],
+                                vy: Math.sin(a) * def.spd[lv],
+                                dmg: def.dmg[lv] * P.dmgMult,
+                                r: 4, col: def.col, life: 60,
+                                pierce: 0, type: 'bolt',
+                            });
+                        }
+                        sndHit();
+                    }
+                }
+                break;
+
+            case 'pierce':
+                if (--w.timer <= 0 && enemies.length > 0) {
+                    w.timer = def.cd[lv];
+                    const nearest = findNearest(enemies, P, def.cnt[lv]);
+                    for (const e of nearest) {
+                        const a = Math.atan2(e.y - P.y, e.x - P.x);
+                        projs.push({
+                            x: P.x, y: P.y,
+                            vx: Math.cos(a) * def.spd[lv],
+                            vy: Math.sin(a) * def.spd[lv],
+                            dmg: def.dmg[lv] * P.dmgMult,
+                            r: 5, col: def.col, life: 100,
+                            pierce: 3 + lv, type: 'bolt',
+                        });
+                    }
+                    if (nearest.length > 0) sndHit();
+                }
+                break;
+
+            case 'rapid':
+                if (--w.timer <= 0 && enemies.length > 0) {
+                    w.timer = def.cd[lv];
+                    const nearest = findNearest(enemies, P, def.cnt[lv]);
+                    for (const e of nearest) {
+                        const a = Math.atan2(e.y - P.y, e.x - P.x);
+                        projs.push({
+                            x: P.x, y: P.y,
+                            vx: Math.cos(a) * def.spd[lv],
+                            vy: Math.sin(a) * def.spd[lv],
+                            dmg: def.dmg[lv] * P.dmgMult,
+                            r: 3, col: def.col, life: 55,
+                            pierce: 0, type: 'bolt',
+                        });
+                    }
+                    if (nearest.length > 0) sndHit();
                 }
                 break;
         }
@@ -1323,6 +1472,7 @@ function drawPlayer() {
 
     const speed = Math.hypot(P.vx, P.vy);
     const angle = Math.atan2(P.vy, P.vx);
+    const skin = SKINS[selectedSkin];
 
     // Engine trail (skip on mobile)
     if (!isMobile && speed > 0.5) {
@@ -1331,7 +1481,7 @@ function drawPlayer() {
         const tx = sx - Math.cos(angle) * trailLen;
         const ty = sy - Math.sin(angle) * trailLen;
         const grad = ctx.createLinearGradient(sx, sy, tx, ty);
-        grad.addColorStop(0,   'rgba(34,211,238,0.3)');
+        grad.addColorStop(0,   hexRgba(skin.body, 0.3));
         grad.addColorStop(0.4, 'rgba(139,92,246,0.15)');
         grad.addColorStop(1,   'rgba(139,92,246,0)');
         ctx.strokeStyle = grad;
@@ -1345,9 +1495,9 @@ function drawPlayer() {
     ctx.save();
     ctx.globalAlpha = 0.12 + Math.sin(frame * 0.08) * 0.05;
     const ringR = P.r + 8 + Math.sin(frame * 0.12) * 3;
-    ctx.strokeStyle = '#22d3ee';
+    ctx.strokeStyle = skin.glow;
     ctx.lineWidth = 1.5;
-    if (!isMobile) { ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 15; }
+    if (!isMobile) { ctx.shadowColor = skin.glow; ctx.shadowBlur = 15; }
     ctx.beginPath(); ctx.arc(sx, sy, ringR, 0, TAU); ctx.stroke();
     ctx.restore();
 
@@ -1355,8 +1505,8 @@ function drawPlayer() {
     if (!isMobile && speed > 1) {
         ctx.save();
         const aGrad = ctx.createRadialGradient(sx, sy, P.r, sx, sy, P.r + 18);
-        aGrad.addColorStop(0, 'rgba(34,211,238,0.15)');
-        aGrad.addColorStop(1, 'rgba(34,211,238,0)');
+        aGrad.addColorStop(0, hexRgba(skin.body, 0.15));
+        aGrad.addColorStop(1, hexRgba(skin.body, 0));
         ctx.fillStyle = aGrad;
         ctx.beginPath(); ctx.arc(sx, sy, P.r + 18, 0, TAU); ctx.fill();
         ctx.restore();
@@ -1364,12 +1514,12 @@ function drawPlayer() {
 
     // Body
     ctx.save();
-    if (!isMobile) { ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 30; }
+    if (!isMobile) { ctx.shadowColor = skin.glow; ctx.shadowBlur = 30; }
     const bGrad = ctx.createRadialGradient(sx - 3, sy - 3, 0, sx, sy, P.r);
     bGrad.addColorStop(0,   '#fff');
-    bGrad.addColorStop(0.3, '#67e8f9');
-    bGrad.addColorStop(0.6, '#22d3ee');
-    bGrad.addColorStop(1,   '#0284c7');
+    bGrad.addColorStop(0.3, skin.light);
+    bGrad.addColorStop(0.6, skin.body);
+    bGrad.addColorStop(1,   skin.dark);
     ctx.fillStyle = bGrad;
     ctx.beginPath(); ctx.arc(sx, sy, P.r, 0, TAU); ctx.fill();
 
@@ -1740,7 +1890,7 @@ function drawPowerUps() {
 
         // Icon
         ctx.shadowBlur = 0;
-        ctx.font = `${Math.round(r * 1.1)}px sans-serif`;
+        ctx.font = `${Math.round(r * 1.1)}px 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(pu.icon, sx, sy);
@@ -2019,12 +2169,12 @@ function render() {
 function gameLoop() {
     update();
 
-    if (state === 'menu') {
+    if (state === 'menu' || state === 'lobby') {
         ctx.fillStyle = '#060612';
         ctx.fillRect(0, 0, W, H);
         drawBgStars();
         frame++;
-    } else if (state === 'play' || state === 'dead') {
+    } else if (state === 'play' || state === 'dead' || state === 'paused') {
         render();
     }
 
