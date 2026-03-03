@@ -1,6 +1,6 @@
 /* ===== RESET ===== */
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#060612;overflow:hidden;touch-action:none;font-family:'Inter',sans-serif;color:#fff;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+body{background:#060612;overflow:hidden;touch-action:none;font-family:'Inter',sans-serif;color:#fff;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}
 canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
 
 /* ===== OVERLAYS ===== */

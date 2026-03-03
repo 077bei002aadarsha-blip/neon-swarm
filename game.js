@@ -15,6 +15,7 @@ let adInProgress = false;   // true while ad is requested/playing
             cgSDK = window.CrazyGames.SDK;
             await cgSDK.init();
             console.log('[CG SDK] Initialized');
+            updateDeviceDetection();
         } else {
             console.warn('[CG SDK] Not available (local/non-CrazyGames environment)');
             cgAdsEnabled = false;
@@ -111,21 +112,21 @@ function requestRewardedAd() {
 }
 
 // ─── MOBILE DETECTION ────────────────────────────────────────
-// Prefer CrazyGames SDK system info when available; fallback to UA heuristic
+// Prefer CrazyGames system info if available, fallback to heuristics
 let isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-             || ('ontouchstart' in window && innerWidth < 1400)
-             || (navigator.maxTouchPoints > 1 && innerWidth < 1400);
+              || ('ontouchstart' in window && innerWidth < 1400)
+              || (navigator.maxTouchPoints > 1 && innerWidth < 1400);
 
-// Override with SDK system info once available
-if (cgSDK) {
-    try {
-        const info = cgSDK.system.info;
-        if (info && info.device) {
-            isMobile = info.device.type === 'mobile' || info.device.type === 'tablet';
-        }
-    } catch(_) {}
-    // Notify SDK that the game is loading (initial assets/setup)
-    try { cgSDK.game.loadingStart(); } catch(_) {}
+// Upgrade detection once CrazyGames SDK is ready
+function updateDeviceDetection() {
+    if (cgSDK) {
+        try {
+            const info = cgSDK.system.info;
+            if (info && info.device) {
+                isMobile = info.device.type === 'mobile' || info.device.type === 'tablet';
+            }
+        } catch (_) {}
+    }
 }
 
 // ─── SKIN COLORS ─────────────────────────────────────────────
@@ -761,15 +762,16 @@ function initGame() {
 }
 
 function showLobby() {
-    // CrazyGames requirement: land in gameplay within 1 click
-    // If player already picked a skin, skip lobby entirely
+    // If player already picked a skin before, skip lobby entirely
     if (hasPickedSkin) {
         startGame();
         return;
     }
-    // First-time users: auto-pick default skin and go straight to game
-    // They can change skin later from the pause menu
-    startGame();
+    state = 'lobby';
+    $startScreen.style.display = 'none';
+    $gameoverScreen.style.display = 'none';
+    $lobbyScreen.style.display = '';
+    buildSkinPicker();
 }
 
 function startGame() {
@@ -780,6 +782,8 @@ function startGame() {
 
     initGame();
     state = 'play';
+    accumulator = 0;          // reset timestep accumulator for clean start
+    lastTimestamp = 0;        // will be set on next rAF callback
     $lobbyScreen.style.display = 'none';
     $startScreen.style.display = 'none';
     $gameoverScreen.style.display = 'none';
@@ -792,11 +796,8 @@ function startGame() {
     startAmbientDrone();
     if (actx && actx.state === 'suspended') actx.resume();
 
-    // Notify CrazyGames SDK that gameplay has started (also serves as loading-stop marker)
-    if (cgSDK) {
-        try { cgSDK.game.loadingStop(); } catch (_) {}
-        try { cgSDK.game.gameplayStart(); } catch (_) {}
-    }
+    // Notify CrazyGames SDK that gameplay has started
+    if (cgSDK) try { cgSDK.game.gameplayStart(); } catch (_) {}
 }
 
 function togglePause(pause) {
@@ -841,7 +842,6 @@ $('quit-btn').onclick   = () => {
     $pauseScreen.style.display = 'none';
     $hud.style.display = 'none';
     $startScreen.style.display = '';
-    if (cgSDK) try { cgSDK.game.gameplayStop(); } catch (_) {}
 };
 
 // ─── REWARDED AD: 2× SCORE ON DEATH SCREEN ─────────────────
@@ -2603,33 +2603,33 @@ function render() {
     }
 }
 
-// ─── GAME LOOP (fixed timestep — safe for 60/120/144/165 Hz) ────
-const STEP = 1000 / 60;        // 16.667 ms per physics tick
-let lastTime = 0;
+// ─── GAME LOOP (Fixed timestep — consistent across 60/144/165Hz) ────
+const FIXED_DT  = 1 / 60;      // logic always runs at 60 ticks/sec
+const MAX_FRAME = 0.25;         // cap to prevent spiral of death after tab switch
 let accumulator = 0;
+let lastTimestamp = 0;
 
 function gameLoop(timestamp) {
-    if (!lastTime) lastTime = timestamp;
-    let elapsed = timestamp - lastTime;
-    lastTime = timestamp;
+    if (!lastTimestamp) lastTimestamp = timestamp;
+    let elapsed = (timestamp - lastTimestamp) / 1000;
+    lastTimestamp = timestamp;
 
-    // Clamp to avoid spiral-of-death on tab-switch or lag spike
-    if (elapsed > 200) elapsed = 200;
+    // Cap elapsed to prevent huge catch-up after tab-away / focus loss
+    if (elapsed > MAX_FRAME) elapsed = MAX_FRAME;
 
-    accumulator += elapsed;
-
-    // Run physics in fixed steps (exactly 60 ticks/second)
-    while (accumulator >= STEP) {
-        update();
-        accumulator -= STEP;
-    }
-
-    // Render once per display frame
     if (state === 'menu' || state === 'lobby') {
+        // Menu/lobby: just render background, no physics accumulation
         ctx.fillStyle = '#060612';
         ctx.fillRect(0, 0, W, H);
         drawBgStars();
+        frame++;
     } else if (state === 'play' || state === 'dead' || state === 'paused') {
+        // Accumulate real time, run fixed-step updates
+        accumulator += elapsed;
+        while (accumulator >= FIXED_DT) {
+            update();
+            accumulator -= FIXED_DT;
+        }
         render();
     }
 
