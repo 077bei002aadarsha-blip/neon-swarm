@@ -56,10 +56,12 @@ function requestMidgameAd() {
     return new Promise(resolve => {
         if (!cgSDK || !cgAdsEnabled || adInProgress) { resolve(); return; }
         adInProgress = true;
-        showAdOverlay(true);
+        // No overlay here — SDK silently ignores if too early (frequency cap).
+        // Overlay only shows once the ad actually starts playing.
 
         cgSDK.ad.requestAd('midgame', {
             adStarted: () => {
+                showAdOverlay(true);
                 muteGameAudio();
             },
             adFinished: () => {
@@ -2581,11 +2583,11 @@ function render() {
 
     // Enemy count (debug)
     ctx.save();
-    ctx.globalAlpha = 0.5;
-    ctx.font = "11px 'Orbitron', sans-serif";
+    ctx.globalAlpha = 0.7;
+    ctx.font = "bold 15px 'Orbitron', sans-serif";
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#64748b';
-    ctx.fillText(`${enemies.length} enemies`, 16, H - 14);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(`${enemies.length} ENEMIES`, 16, H - 16);
     ctx.restore();
 
     // Kill streak notification
