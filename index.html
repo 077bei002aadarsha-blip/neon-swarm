@@ -6,7 +6,8 @@
     <title>NEON SWARM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
+    <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 </head>
 <body>
     <canvas id="game"></canvas>
@@ -74,8 +75,21 @@
         <div class="overlay-content">
             <h2 class="gameover-title">GAME OVER</h2>
             <div id="final-stats"></div>
-            <button class="glow-btn" id="retry-btn">↻ RETRY</button>
+            <div id="reward-ad-wrap" style="display:none">
+                <button class="glow-btn reward-btn" id="reward-ad-btn">
+                    <span class="btn-shimmer"></span>
+                    <span class="reward-icon">▶</span> WATCH AD FOR 2× SCORE
+                </button>
+                <p class="reward-note">Optional — watch a short video to double your score</p>
+            </div>
+            <button class="glow-btn" id="retry-btn"><span class="btn-shimmer"></span>↻ RETRY</button>
         </div>
+    </div>
+
+    <!-- Ad Loading Overlay (blocks interaction during ad request) -->
+    <div id="ad-overlay" style="display:none">
+        <div class="ad-spinner"></div>
+        <div class="ad-text">LOADING AD...</div>
     </div>
 
     <!-- Boss Warning -->
@@ -86,6 +100,6 @@
         <div class="onboard-hint" id="onboard-text"></div>
     </div>
 
-    <script src="game.js?v=12"></script>
+    <script src="game.js?v=13"></script>
 </body>
 </html>
