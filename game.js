@@ -6,7 +6,8 @@
 
 // ─── MOBILE DETECTION ────────────────────────────────────────
 const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-              || ('ontouchstart' in window && innerWidth < 1024);
+              || ('ontouchstart' in window && innerWidth < 1400)
+              || (navigator.maxTouchPoints > 1 && innerWidth < 1400);
 
 // ─── SKIN COLORS ─────────────────────────────────────────────
 const SKINS = [
@@ -1746,6 +1747,14 @@ function drawPlayer() {
     // Body
     ctx.save();
     if (!isMobile) { ctx.shadowColor = skin.glow; ctx.shadowBlur = 30; }
+    if (isMobile) {
+        // Simple flat fill on mobile — no gradients
+        ctx.fillStyle = skin.body;
+        ctx.beginPath(); ctx.arc(sx, sy, P.r, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(sx - 2, sy - 2, P.r * 0.4, 0, TAU); ctx.fill();
+    } else {
     const bGrad = ctx.createRadialGradient(sx - 3, sy - 3, 0, sx, sy, P.r);
     bGrad.addColorStop(0,   '#fff');
     bGrad.addColorStop(0.3, skin.light);
@@ -1760,6 +1769,7 @@ function drawPlayer() {
     hGrad.addColorStop(1, 'transparent');
     ctx.fillStyle = hGrad;
     ctx.beginPath(); ctx.arc(sx, sy, P.r * 0.7, 0, TAU); ctx.fill();
+    }
     ctx.restore();
 
     // Eyes
@@ -1985,7 +1995,7 @@ function drawProjectiles() {
             ctx.beginPath(); ctx.arc(4, 0, 2, 0, TAU); ctx.fill();
         } else {
             // Bolt
-            ctx.scale(1.5, 1);
+            ctx.scale(isMobile ? 1.2 : 1.5, 1);
             ctx.beginPath(); ctx.arc(0, 0, p.r, 0, TAU); ctx.fill();
             ctx.fillStyle = '#fff';
             ctx.globalAlpha = 0.5;
@@ -2309,8 +2319,7 @@ function drawEdgeIndicators() {
         ctx.translate(ex, ey);
         ctx.rotate(a);
         ctx.fillStyle = e.col;
-        ctx.shadowColor = e.col;
-        ctx.shadowBlur = 10;
+        if (!isMobile) { ctx.shadowColor = e.col; ctx.shadowBlur = 10; }
         ctx.beginPath();
         ctx.moveTo(12, 0); ctx.lineTo(-6, -7); ctx.lineTo(-6, 7);
         ctx.closePath();
@@ -2322,6 +2331,8 @@ function drawEdgeIndicators() {
 // ─── MAIN RENDER ────────────────────────────────────────────
 function render() {
     ctx.fillStyle = '#060612';
+    ctx.shadowBlur = 0; // safety reset every frame
+    ctx.shadowColor = 'transparent';
     ctx.fillRect(0, 0, W, H);
     drawBgStars();
 
@@ -2391,8 +2402,7 @@ function render() {
         ctx.font = "bold 32px 'Orbitron', sans-serif";
         const col = kills >= 200 ? '#f472b6' : (kills >= 100 ? '#a78bfa' : '#fbbf24');
         ctx.fillStyle = col;
-        ctx.shadowColor = col;
-        ctx.shadowBlur = 25;
+        if (!isMobile) { ctx.shadowColor = col; ctx.shadowBlur = 25; }
         ctx.globalAlpha = 1 - t;
         ctx.fillText(`${kills} KILLS!`, W / 2, H / 2 + 60 - t * 30);
         ctx.restore();
