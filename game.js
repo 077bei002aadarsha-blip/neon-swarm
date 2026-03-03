@@ -6,8 +6,6 @@
 
 // ─── CRAZYGAMES SDK ──────────────────────────────────────────
 let cgSDK = null;
-let cgAdsEnabled = true;    // false if adblocker detected or SDK unavailable
-let adInProgress = false;   // true while ad is requested/playing
 
 (async function initCrazyGamesSDK() {
     try {
@@ -18,100 +16,11 @@ let adInProgress = false;   // true while ad is requested/playing
             updateDeviceDetection();
         } else {
             console.warn('[CG SDK] Not available (local/non-CrazyGames environment)');
-            cgAdsEnabled = false;
         }
     } catch (e) {
         console.warn('[CG SDK] Init failed:', e);
-        cgAdsEnabled = false;
     }
 })();
-
-/** Mute all game audio (for ad playback) */
-function muteGameAudio() {
-    if (actx) {
-        try { actx.suspend(); } catch (_) {}
-    }
-    stopAmbientDrone();
-}
-
-/** Unmute game audio (after ad finishes) */
-function unmuteGameAudio() {
-    if (actx) {
-        try { actx.resume(); } catch (_) {}
-    }
-}
-
-/** Show/hide the ad loading overlay that blocks interaction */
-function showAdOverlay(show) {
-    const el = document.getElementById('ad-overlay');
-    if (el) el.style.display = show ? '' : 'none';
-}
-
-/**
- * Request a midgame ad (interstitial).
- * Called at natural break points (death). SDK handles frequency capping.
- * Returns a promise that resolves when the ad is done or skipped.
- */
-function requestMidgameAd() {
-    return new Promise(resolve => {
-        if (!cgSDK || !cgAdsEnabled || adInProgress) { resolve(); return; }
-        adInProgress = true;
-        // No overlay here — SDK silently ignores if too early (frequency cap).
-        // Overlay only shows once the ad actually starts playing.
-
-        cgSDK.ad.requestAd('midgame', {
-            adStarted: () => {
-                showAdOverlay(true);
-                muteGameAudio();
-            },
-            adFinished: () => {
-                unmuteGameAudio();
-                showAdOverlay(false);
-                adInProgress = false;
-                resolve();
-            },
-            adError: (err) => {
-                console.warn('[CG SDK] Midgame ad error:', err);
-                unmuteGameAudio();
-                showAdOverlay(false);
-                adInProgress = false;
-                resolve();     // continue game normally
-            }
-        });
-    });
-}
-
-/**
- * Request a rewarded ad.
- * Returns a promise that resolves to true if the user watched it,
- * false if skipped/error.
- */
-function requestRewardedAd() {
-    return new Promise(resolve => {
-        if (!cgSDK || !cgAdsEnabled || adInProgress) { resolve(false); return; }
-        adInProgress = true;
-        showAdOverlay(true);
-
-        cgSDK.ad.requestAd('rewarded', {
-            adStarted: () => {
-                muteGameAudio();
-            },
-            adFinished: () => {
-                unmuteGameAudio();
-                showAdOverlay(false);
-                adInProgress = false;
-                resolve(true);     // player earned the reward
-            },
-            adError: (err) => {
-                console.warn('[CG SDK] Rewarded ad error:', err);
-                unmuteGameAudio();
-                showAdOverlay(false);
-                adInProgress = false;
-                resolve(false);    // no reward
-            }
-        });
-    });
-}
 
 // ─── MOBILE DETECTION ────────────────────────────────────────
 // Prefer CrazyGames system info if available, fallback to heuristics
@@ -846,36 +755,6 @@ $('quit-btn').onclick   = () => {
     $startScreen.style.display = '';
 };
 
-// ─── REWARDED AD: 2× SCORE ON DEATH SCREEN ─────────────────
-// Per CrazyGames guidelines: optional, clearly labeled with video icon,
-// same-size skip alternative (Retry), not aggressive
-$('reward-ad-btn').onclick = async () => {
-    const btn = $('reward-ad-btn');
-    if (btn.disabled) return;
-    btn.disabled = true;
-    btn.textContent = 'LOADING...';
-
-    const watched = await requestRewardedAd();
-    if (watched) {
-        // Double the score and update display
-        score *= 2;
-        const isNewBest = score > best;
-        if (isNewBest) { best = score; localStorage.setItem('ns_best', best); }
-
-        // Show reward confirmation
-        $finalStats.querySelector('.stat-value').textContent = score.toLocaleString() + (isNewBest ? ' ★ NEW BEST' : '');
-        if (isNewBest) $finalStats.querySelector('.stat-value').className = 'stat-value new-best';
-
-        // Flash the score
-        const wrap = $('reward-ad-wrap');
-        if (wrap) wrap.innerHTML = '<div class="reward-done">✓ SCORE DOUBLED!</div>';
-    } else {
-        // Ad didn't play — reset button but don't reward
-        btn.disabled = false;
-        btn.innerHTML = '<span class="btn-shimmer"></span><span class="reward-icon">▶</span> WATCH AD FOR 2× SCORE';
-    }
-};
-
 function buildPauseSkinPicker() {
     const container = $('pause-skin-picker');
     if (!container) return;
@@ -1344,11 +1223,7 @@ function die() {
     const isNewBest = score > best;
     if (isNewBest) { best = score; localStorage.setItem('ns_best', best); }
 
-    // -- CrazyGames: request midgame ad at death (natural break) --
-    // SDK handles frequency capping automatically — safe to call every death
-    setTimeout(async () => {
-        await requestMidgameAd();
-
+    setTimeout(() => {
         $hud.style.display = 'none';
         $gameoverScreen.style.display = '';
         const min = Math.floor(gt / 60);
@@ -1360,12 +1235,6 @@ function die() {
             <div class="stat-row"><span class="stat-label">Max Combo</span><span class="stat-value">${maxCombo}x</span></div>
             <div class="stat-row"><span class="stat-label">Best Score</span><span class="stat-value">${best.toLocaleString()}</span></div>
         `;
-
-        // -- Show rewarded ad button (only if SDK available & no adblocker) --
-        const $rewardWrap = $('reward-ad-wrap');
-        if ($rewardWrap) {
-            $rewardWrap.style.display = (cgAdsEnabled && cgSDK) ? '' : 'none';
-        }
     }, 800);
 }
 
@@ -2583,11 +2452,11 @@ function render() {
 
     // Enemy count (debug)
     ctx.save();
-    ctx.globalAlpha = 0.7;
-    ctx.font = "bold 15px 'Orbitron', sans-serif";
+    ctx.globalAlpha = 0.5;
+    ctx.font = "11px 'Orbitron', sans-serif";
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText(`${enemies.length} ENEMIES`, 16, H - 16);
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(`${enemies.length} enemies`, 16, H - 14);
     ctx.restore();
 
     // Kill streak notification
