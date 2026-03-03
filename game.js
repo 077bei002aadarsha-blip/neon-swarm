@@ -14,6 +14,14 @@ let cgSDK = null;
             await cgSDK.init();
             console.log('[CG SDK] Initialized');
             updateDeviceDetection();
+
+            // Listen for SDK pause/resume (e.g. during ads) to mute/unmute audio
+            cgSDK.game.addEventListener('pause', () => {
+                if (actx && actx.state === 'running') actx.suspend();
+            });
+            cgSDK.game.addEventListener('resume', () => {
+                if (actx && actx.state === 'suspended') actx.resume();
+            });
         } else {
             console.warn('[CG SDK] Not available (local/non-CrazyGames environment)');
         }
