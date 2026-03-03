@@ -3,214 +3,310 @@
 <head>
 <meta charset="UTF-8">
 <title>Neon Swarm Cover Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
-  body { background: #111; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-  canvas { display: block; margin: 20px auto; border: 1px solid #333; cursor: pointer; }
-  h2 { color: #0ff; margin-top: 40px; }
+  body { background: #0a0a0a; color: #fff; font-family: 'Orbitron', sans-serif; text-align: center; padding: 20px; }
+  canvas { display: block; margin: 20px auto; border: 1px solid #222; cursor: pointer; max-width: 90vw; }
+  h2 { color: #0ff; margin-top: 40px; font-size: 18px; letter-spacing: 2px; }
   p { color: #aaa; font-size: 14px; }
   .note { color: #0f0; font-size: 16px; margin-bottom: 30px; }
+  .dl-btn { display: inline-block; margin: 8px; padding: 10px 24px; background: #0ff; color: #000;
+    font-weight: 700; border: none; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 13px;
+    letter-spacing: 1px; border-radius: 4px; }
+  .dl-btn:hover { background: #fff; }
 </style>
 </head>
 <body>
-<h1>Neon Swarm — Cover Image Generator</h1>
-<p class="note">Click each image to download it as PNG</p>
+<h1 style="letter-spacing:4px">NEON SWARM — COVER GENERATOR</h1>
+<p class="note">Click each canvas or use the download buttons</p>
 
-<h2>Landscape 16:9 (1920x1080)</h2>
+<h2>LANDSCAPE 16:9 (1920 × 1080)</h2>
 <canvas id="landscape" width="1920" height="1080"></canvas>
+<button class="dl-btn" onclick="dl('landscape')">DOWNLOAD LANDSCAPE</button>
 
-<h2>Portrait 2:3 (800x1200)</h2>
+<h2>PORTRAIT 2:3 (800 × 1200)</h2>
 <canvas id="portrait" width="800" height="1200"></canvas>
+<button class="dl-btn" onclick="dl('portrait')">DOWNLOAD PORTRAIT</button>
 
-<h2>Square 1:1 (800x800)</h2>
+<h2>SQUARE 1:1 (800 × 800)</h2>
 <canvas id="square" width="800" height="800"></canvas>
+<button class="dl-btn" onclick="dl('square')">DOWNLOAD SQUARE</button>
 
 <script>
+/* ── Seeded PRNG for deterministic layouts ── */
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function dl(id) {
+  const c = document.getElementById(id);
+  const a = document.createElement('a');
+  a.download = 'neon-swarm-' + id + '.png';
+  a.href = c.toDataURL('image/png');
+  a.click();
+}
+
+/* ── Wait for Orbitron font to load ── */
+document.fonts.ready.then(() => {
+  drawCover('landscape');
+  drawCover('portrait');
+  drawCover('square');
+});
+
 function drawCover(canvasId) {
   const cvs = document.getElementById(canvasId);
   const ctx = cvs.getContext('2d');
   const W = cvs.width, H = cvs.height;
-  const scale = Math.min(W, H) / 800; // base scale
+  const S = Math.min(W, H) / 800;                    // base scale
+  const rand = mulberry32(canvasId.length * 7919);    // deterministic per size
+  const rng = (lo, hi) => lo + rand() * (hi - lo);
+  const rngInt = (lo, hi) => Math.floor(rng(lo, hi));
 
-  // Background gradient
-  const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.7);
-  bg.addColorStop(0, '#1a0a2e');
-  bg.addColorStop(0.5, '#0d0221');
-  bg.addColorStop(1, '#000010');
+  /* ── 1. DEEP SPACE BACKGROUND ── */
+  const bg = ctx.createRadialGradient(W/2, H*0.45, 0, W/2, H*0.45, Math.max(W,H)*0.8);
+  bg.addColorStop(0, '#1a0a3a');
+  bg.addColorStop(0.4, '#0d0228');
+  bg.addColorStop(1, '#020008');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Grid lines (neon floor effect)
+  /* ── 2. SUBTLE PERSPECTIVE GRID ── */
   ctx.save();
-  ctx.globalAlpha = 0.15;
+  ctx.globalAlpha = 0.08;
   ctx.strokeStyle = '#0ff';
   ctx.lineWidth = 1;
-  const gridSize = 60 * scale;
-  for (let x = 0; x < W; x += gridSize) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-  }
-  for (let y = 0; y < H; y += gridSize) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
+  const gs = 55 * S;
+  for (let x = 0; x < W; x += gs) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += gs) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
   ctx.restore();
 
-  // Scattered enemy shapes
-  const enemyColors = ['#ff004c', '#ff6600', '#ff00ff', '#ffcc00', '#ff3366'];
-  const rng = (min, max) => min + Math.random() * (max - min);
-  
-  for (let i = 0; i < 40; i++) {
-    const ex = rng(W * 0.05, W * 0.95);
-    const ey = rng(H * 0.1, H * 0.9);
-    const er = rng(8, 22) * scale;
-    const col = enemyColors[Math.floor(Math.random() * enemyColors.length)];
-    
+  /* ── 3. ENEMY SWARM (arranged in a ring around the player) ── */
+  const cx = W / 2, cy = H * 0.55;
+  const enemyColors = ['#ff004c','#ff6600','#ff00ff','#ffcc00','#ff3366','#cc00ff'];
+
+  // Outer ring — large enemies
+  const outerCount = 16;
+  const outerR = Math.min(W, H) * 0.36;
+  for (let i = 0; i < outerCount; i++) {
+    const a = (Math.PI * 2 / outerCount) * i + rng(-0.15, 0.15);
+    const r = outerR + rng(-20, 20) * S;
+    const ex = cx + Math.cos(a) * r;
+    const ey = cy + Math.sin(a) * r;
+    const er = rng(14, 26) * S;
+    const col = enemyColors[rngInt(0, enemyColors.length)];
+    drawEnemy(ctx, ex, ey, er, col, S, rngInt(0, 3));
+  }
+
+  // Middle ring
+  const midCount = 12;
+  const midR = Math.min(W, H) * 0.24;
+  for (let i = 0; i < midCount; i++) {
+    const a = (Math.PI * 2 / midCount) * i + rng(-0.2, 0.2);
+    const r = midR + rng(-15, 15) * S;
+    const ex = cx + Math.cos(a) * r;
+    const ey = cy + Math.sin(a) * r;
+    const er = rng(10, 18) * S;
+    const col = enemyColors[rngInt(0, enemyColors.length)];
+    drawEnemy(ctx, ex, ey, er, col, S, rngInt(0, 3));
+  }
+
+  // Scattered background enemies (faded)
+  for (let i = 0; i < 20; i++) {
+    const ex = rng(W * 0.02, W * 0.98);
+    const ey = rng(H * 0.05, H * 0.95);
+    const er = rng(5, 12) * S;
+    const col = enemyColors[rngInt(0, enemyColors.length)];
     ctx.save();
-    ctx.globalAlpha = rng(0.3, 0.7);
-    ctx.fillStyle = col;
-    ctx.shadowColor = col;
-    ctx.shadowBlur = 15 * scale;
-    
-    // Random shapes
-    const shapeType = Math.floor(Math.random() * 3);
-    if (shapeType === 0) {
-      // Circle
-      ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2); ctx.fill();
-    } else if (shapeType === 1) {
-      // Diamond
-      ctx.beginPath();
-      ctx.moveTo(ex, ey - er); ctx.lineTo(ex + er, ey);
-      ctx.lineTo(ex, ey + er); ctx.lineTo(ex - er, ey); ctx.closePath(); ctx.fill();
-    } else {
-      // Triangle
-      ctx.beginPath();
-      ctx.moveTo(ex, ey - er);
-      ctx.lineTo(ex + er * 0.87, ey + er * 0.5);
-      ctx.lineTo(ex - er * 0.87, ey + er * 0.5);
-      ctx.closePath(); ctx.fill();
-    }
+    ctx.globalAlpha = rng(0.15, 0.35);
+    drawEnemyShape(ctx, ex, ey, er, col, S, rngInt(0, 3));
     ctx.restore();
   }
 
-  // Draw player (center-ish, slightly below center)
-  const px = W / 2, py = H * 0.52;
-  const pr = 28 * scale;
+  /* ── 4. WEAPON EFFECTS (bolts + orbiters radiating from player) ── */
+  // Lightning-style energy beams
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI * 2 / 6) * i + 0.3;
+    const len = rng(100, 220) * S;
+    ctx.save();
+    ctx.strokeStyle = '#00ffcc';
+    ctx.shadowColor = '#00ffcc';
+    ctx.shadowBlur = 12 * S;
+    ctx.lineWidth = 2.5 * S;
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    // Jagged bolt
+    let bx = cx, by = cy;
+    const segs = 5;
+    for (let s = 1; s <= segs; s++) {
+      bx = cx + Math.cos(a) * len * (s/segs) + rng(-12, 12) * S;
+      by = cy + Math.sin(a) * len * (s/segs) + rng(-12, 12) * S;
+      ctx.lineTo(bx, by);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
 
-  // Player glow
-  ctx.save();
-  ctx.shadowColor = '#0ff';
-  ctx.shadowBlur = 40 * scale;
-  ctx.fillStyle = '#0ff';
-  ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-
-  // Player body
-  ctx.save();
-  ctx.fillStyle = '#0ff';
-  ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.fill();
-  // Inner lighter circle
-  ctx.fillStyle = '#66ffff';
-  ctx.beginPath(); ctx.arc(px, py, pr * 0.6, 0, Math.PI * 2); ctx.fill();
-  // White core
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath(); ctx.arc(px, py, pr * 0.25, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-
-  // Orbiting weapon (small circles around player)
-  for (let i = 0; i < 4; i++) {
-    const angle = (Math.PI * 2 / 4) * i - Math.PI / 4;
-    const ox = px + Math.cos(angle) * pr * 2.2;
-    const oy = py + Math.sin(angle) * pr * 2.2;
+  // Orbiter circles
+  for (let i = 0; i < 5; i++) {
+    const a = (Math.PI * 2 / 5) * i;
+    const od = 60 * S;
+    const ox = cx + Math.cos(a) * od;
+    const oy = cy + Math.sin(a) * od;
     ctx.save();
     ctx.fillStyle = '#ff0';
     ctx.shadowColor = '#ff0';
-    ctx.shadowBlur = 10 * scale;
-    ctx.beginPath(); ctx.arc(ox, oy, 5 * scale, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 14 * S;
+    ctx.beginPath(); ctx.arc(ox, oy, 6 * S, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
-  // Bolts flying outward
-  for (let i = 0; i < 8; i++) {
-    const angle = (Math.PI * 2 / 8) * i;
-    const dist = rng(80, 200) * scale;
-    const bx = px + Math.cos(angle) * dist;
-    const by = py + Math.sin(angle) * dist;
-    ctx.save();
-    ctx.fillStyle = '#00ffcc';
-    ctx.shadowColor = '#00ffcc';
-    ctx.shadowBlur = 8 * scale;
-    // Diamond bolt
-    const bs = 6 * scale;
-    ctx.beginPath();
-    ctx.moveTo(bx, by - bs * 1.5);
-    ctx.lineTo(bx + bs, by);
-    ctx.lineTo(bx, by + bs * 1.5);
-    ctx.lineTo(bx - bs, by);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
+  /* ── 5. PLAYER CHARACTER (large, prominent, centre) ── */
+  const pr = 38 * S;
 
-  // Title: "NEON SWARM"
-  const titleSize = Math.floor(72 * scale);
+  // Big outer glow
   ctx.save();
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  
-  // Title glow layers
-  ctx.font = `bold ${titleSize}px Arial, sans-serif`;
   ctx.shadowColor = '#0ff';
-  ctx.shadowBlur = 30 * scale;
-  ctx.fillStyle = '#0ff';
-  ctx.fillText('NEON SWARM', W / 2, H * 0.18);
-  // Sharper layer
-  ctx.shadowBlur = 10 * scale;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('NEON SWARM', W / 2, H * 0.18);
+  ctx.shadowBlur = 80 * S;
+  ctx.fillStyle = 'rgba(0,255,255,0.15)';
+  ctx.beginPath(); ctx.arc(cx, cy, pr * 2.5, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
-  // Subtitle
-  const subSize = Math.floor(24 * scale);
+  // Medium glow ring
   ctx.save();
-  ctx.textAlign = 'center';
-  ctx.font = `${subSize}px Arial, sans-serif`;
-  ctx.fillStyle = '#ff66aa';
-  ctx.shadowColor = '#ff66aa';
-  ctx.shadowBlur = 10 * scale;
-  ctx.fillText('SURVIVE THE SWARM', W / 2, H * 0.18 + titleSize * 0.8);
+  ctx.shadowColor = '#0ff';
+  ctx.shadowBlur = 40 * S;
+  ctx.fillStyle = 'rgba(0,255,255,0.3)';
+  ctx.beginPath(); ctx.arc(cx, cy, pr * 1.4, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
-  // XP orbs scattered
-  for (let i = 0; i < 25; i++) {
-    const ox = rng(W * 0.05, W * 0.95);
-    const oy = rng(H * 0.25, H * 0.9);
-    const or2 = rng(3, 7) * scale;
+  // Player body
+  const bodyGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, pr);
+  bodyGrad.addColorStop(0, '#ffffff');
+  bodyGrad.addColorStop(0.3, '#aaffff');
+  bodyGrad.addColorStop(0.7, '#00ffff');
+  bodyGrad.addColorStop(1, '#008888');
+  ctx.save();
+  ctx.shadowColor = '#0ff';
+  ctx.shadowBlur = 30 * S;
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath(); ctx.arc(cx, cy, pr, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // Bright core
+  ctx.save();
+  ctx.fillStyle = '#fff';
+  ctx.shadowColor = '#fff';
+  ctx.shadowBlur = 15 * S;
+  ctx.beginPath(); ctx.arc(cx, cy, pr * 0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  /* ── 6. XP GEMS (small green diamonds) ── */
+  for (let i = 0; i < 18; i++) {
+    const gx = rng(W*0.08, W*0.92);
+    const gy = rng(H*0.15, H*0.85);
+    const gs2 = rng(4, 8) * S;
     ctx.save();
-    ctx.globalAlpha = rng(0.4, 0.8);
+    ctx.globalAlpha = rng(0.5, 0.9);
     ctx.fillStyle = '#00ff88';
     ctx.shadowColor = '#00ff88';
-    ctx.shadowBlur = 8 * scale;
-    ctx.beginPath(); ctx.arc(ox, oy, or2, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 6 * S;
+    ctx.beginPath();
+    ctx.moveTo(gx, gy - gs2); ctx.lineTo(gx + gs2*0.6, gy);
+    ctx.lineTo(gx, gy + gs2); ctx.lineTo(gx - gs2*0.6, gy);
+    ctx.closePath(); ctx.fill();
     ctx.restore();
   }
 
-  // Vignette
-  const vig = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.3, W/2, H/2, Math.max(W,H)*0.75);
+  /* ── 7. VIGNETTE ── */
+  const vig = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.25, W/2, H/2, Math.max(W,H)*0.78);
   vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(0,0,0,0.7)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.65)');
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, W, H);
 
-  // Click to download
-  cvs.onclick = () => {
-    const link = document.createElement('a');
-    link.download = `neon-swarm-${canvasId}.png`;
-    link.href = cvs.toDataURL('image/png');
-    link.click();
-  };
+  /* ── 8. TITLE — "NEON SWARM" (Orbitron, top area) ── */
+  const isPortrait = H > W;
+  const titleY = isPortrait ? H * 0.12 : H * 0.17;
+  const titleSize = Math.floor((isPortrait ? 58 : 80) * S);
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '900 ' + titleSize + 'px Orbitron, sans-serif';
+
+  // Outermost glow
+  ctx.shadowColor = '#0ff';
+  ctx.shadowBlur = 50 * S;
+  ctx.fillStyle = 'rgba(0,255,255,0.4)';
+  ctx.fillText('NEON SWARM', W/2, titleY);
+
+  // Main cyan text
+  ctx.shadowBlur = 25 * S;
+  ctx.fillStyle = '#0ff';
+  ctx.fillText('NEON SWARM', W/2, titleY);
+
+  // Bright white overlay for punch
+  ctx.shadowColor = '#fff';
+  ctx.shadowBlur = 8 * S;
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.6;
+  ctx.fillText('NEON SWARM', W/2, titleY);
+  ctx.restore();
+
+  /* ── 9. SUBTLE TOP/BOTTOM FADE (cinematic) ── */
+  const topFade = ctx.createLinearGradient(0, 0, 0, H * 0.12);
+  topFade.addColorStop(0, 'rgba(0,0,0,0.5)');
+  topFade.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = topFade;
+  ctx.fillRect(0, 0, W, H * 0.12);
+
+  const botFade = ctx.createLinearGradient(0, H * 0.88, 0, H);
+  botFade.addColorStop(0, 'rgba(0,0,0,0)');
+  botFade.addColorStop(1, 'rgba(0,0,0,0.5)');
+  ctx.fillStyle = botFade;
+  ctx.fillRect(0, H * 0.88, W, H * 0.12);
+
+  /* ── Click to download ── */
+  cvs.onclick = () => dl(canvasId);
 }
 
-drawCover('landscape');
-drawCover('portrait');
-drawCover('square');
+/* ── Enemy drawing helpers ── */
+function drawEnemy(ctx, x, y, r, color, S, shape) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 18 * S;
+  ctx.globalAlpha = 0.85;
+  drawEnemyShape(ctx, x, y, r, color, S, shape);
+  ctx.restore();
+}
+
+function drawEnemyShape(ctx, x, y, r, color, S, shape) {
+  ctx.fillStyle = color;
+  if (shape === 0) {
+    // Circle (walker)
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  } else if (shape === 1) {
+    // Diamond (speeder)
+    ctx.beginPath();
+    ctx.moveTo(x, y - r * 1.2); ctx.lineTo(x + r, y);
+    ctx.lineTo(x, y + r * 1.2); ctx.lineTo(x - r, y);
+    ctx.closePath(); ctx.fill();
+  } else {
+    // Triangle (tank)
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r * 0.87, y + r * 0.5);
+    ctx.lineTo(x - r * 0.87, y + r * 0.5);
+    ctx.closePath(); ctx.fill();
+  }
+}
 </script>
 </body>
 </html>
