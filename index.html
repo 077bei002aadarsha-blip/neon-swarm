@@ -6,7 +6,7 @@
     <title>NEON SWARM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
     <canvas id="game"></canvas>
@@ -40,7 +40,11 @@
             <h1 class="title">NEON<br><span>SWARM</span></h1>
             <p class="subtitle">Chase the high score</p>
             <button class="glow-btn" id="play-btn"><span class="btn-shimmer"></span>▶ PLAY</button>
-            <div class="hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrow Keys to move &bull; Touch &amp; drag on mobile<br>Weapons fire automatically &bull; Collect glowing power-ups to get stronger</div>
+            <div class="controls-visual" id="controls-hint">
+                <div class="ctrl-keys"><kbd>W</kbd><br><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+                <span class="ctrl-sep">MOVE</span>
+                <div class="ctrl-auto">⚡ AUTO-FIRE</div>
+            </div>
         </div>
     </div>
 
@@ -57,7 +61,7 @@
     <div id="pause-screen" class="overlay" style="display:none">
         <div class="overlay-content">
             <h2 class="pause-title">PAUSED</h2>
-            <p class="pause-hint">Press <kbd>ESC</kbd> to resume</p>
+            <p class="pause-hint">Press <kbd>P</kbd> to resume</p>
             <div class="pause-skin-label">CHANGE SKIN</div>
             <div id="pause-skin-picker" class="pause-skin-row"></div>
             <button class="glow-btn" id="resume-btn"><span class="btn-shimmer"></span>▶ RESUME</button>
@@ -77,6 +81,11 @@
     <!-- Boss Warning -->
     <div id="boss-warning" style="display:none">⚠ BOSS INCOMING ⚠</div>
 
-    <script src="game.js?v=11"></script>
+    <!-- In-game onboarding (fades after 5s) -->
+    <div id="onboard-overlay" style="display:none">
+        <div class="onboard-hint" id="onboard-text"></div>
+    </div>
+
+    <script src="game.js?v=12"></script>
 </body>
 </html>

@@ -467,9 +467,15 @@ const joy  = { active: false, id: -1, sx: 0, sy: 0, dx: 0, dy: 0 };
 
 addEventListener('keydown', e => {
     keys[e.key.toLowerCase()] = true;
-    if (e.key === 'Escape') {
+    // CrazyGames: ESC exits fullscreen, so use P for pause instead
+    if (e.key.toLowerCase() === 'p' || e.key === 'Escape') {
         if (state === 'play') togglePause(true);
         else if (state === 'paused') togglePause(false);
+    }
+    // Space / Enter to skip screens quickly
+    if ((e.key === ' ' || e.key === 'Enter') && state === 'menu') {
+        e.preventDefault();
+        showLobby();
     }
 });
 addEventListener('keyup',   e => { keys[e.key.toLowerCase()] = false; });
@@ -662,6 +668,9 @@ function startGame() {
     $pauseScreen.style.display = 'none';
     $hud.style.display = '';
     $bestScore.textContent = 'BEST: ' + best.toLocaleString();
+
+    // In-game onboarding: show controls briefly
+    showOnboarding();
     startAmbientDrone();
     if (actx && actx.state === 'suspended') actx.resume();
 }
@@ -729,13 +738,30 @@ function buildPauseSkinPicker() {
     });
 }
 
+// In-game onboarding — shows controls for 4s then fades
+function showOnboarding() {
+    const el = $('onboard-overlay');
+    const txt = $('onboard-text');
+    if (!el || !txt) return;
+    if (isMobile) {
+        txt.innerHTML = 'TOUCH & DRAG TO MOVE<br><small style="font-size:0.7em;opacity:0.6">weapons fire automatically</small>';
+    } else {
+        txt.innerHTML = '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> TO MOVE<br><small style="font-size:0.7em;opacity:0.6">weapons fire automatically &bull; <kbd>P</kbd> pause</small>';
+    }
+    el.style.display = '';
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 3500);
+    setTimeout(() => { el.style.display = 'none'; }, 4500);
+}
+
 // ─── PLAYER ─────────────────────────────────────────────────
 function updatePlayer() {
     let mx = 0, my = 0;
-    if (keys['w'] || keys['arrowup'])    my -= 1;
-    if (keys['s'] || keys['arrowdown'])  my += 1;
-    if (keys['a'] || keys['arrowleft'])  mx -= 1;
-    if (keys['d'] || keys['arrowright']) mx += 1;
+    // WASD + Arrow Keys + AZERTY (ZQSD) support
+    if (keys['w'] || keys['z'] || keys['arrowup'])    my -= 1;
+    if (keys['s'] || keys['arrowdown'])                my += 1;
+    if (keys['a'] || keys['q'] || keys['arrowleft'])   mx -= 1;
+    if (keys['d'] || keys['arrowright'])                mx += 1;
     if (joy.active) { mx = joy.dx; my = joy.dy; }
 
     const len = Math.hypot(mx, my);
