@@ -17,7 +17,8 @@ const SKINS = [
     { name: 'Purple', body: '#a78bfa', light: '#c4b5fd', dark: '#6d28d9', glow: '#a78bfa' },
     { name: 'Red',    body: '#ef4444', light: '#fca5a5', dark: '#991b1b', glow: '#ef4444' },
 ];
-let selectedSkin = 0;
+let selectedSkin = +(localStorage.getItem('ns_skin') || 0);
+let hasPickedSkin = localStorage.getItem('ns_skinPicked') === '1';
 
 // ─── CONFIG ──────────────────────────────────────────────────
 // All tunable game constants in one place for easy balancing.
@@ -605,6 +606,8 @@ function initGame() {
         invuln: 0,
     };
     weapons    = [{ type: 'orbiter', lv: 0, timer: 0, angle: 0 }];
+    // First 30s hook: start with bolt gun so player sees action immediately
+    weapons.push({ type: 'bolt', lv: 0, timer: 0, angle: 0 });
     enemies    = [];
     projs      = [];
     gems       = [];
@@ -626,9 +629,17 @@ function initGame() {
     scoreMultTimer = 0;
     combo = 0; comboTimer = 0; maxCombo = 0;
     lastScore = 0; heartbeatTimer = 0;
+
+    // First 30s hook: spawn initial wave immediately so action starts instantly
+    for (let i = 0; i < 5; i++) spawnEnemy('walker');
 }
 
 function showLobby() {
+    // If player already picked a skin before, skip lobby entirely
+    if (hasPickedSkin) {
+        startGame();
+        return;
+    }
     state = 'lobby';
     $startScreen.style.display = 'none';
     $gameoverScreen.style.display = 'none';
@@ -637,6 +648,11 @@ function showLobby() {
 }
 
 function startGame() {
+    // Persist skin choice
+    localStorage.setItem('ns_skin', selectedSkin);
+    localStorage.setItem('ns_skinPicked', '1');
+    hasPickedSkin = true;
+
     initGame();
     state = 'play';
     $lobbyScreen.style.display = 'none';
@@ -653,6 +669,7 @@ function togglePause(pause) {
     if (pause && state === 'play') {
         state = 'paused';
         $pauseScreen.style.display = '';
+        if ($('pause-skin-picker')) buildPauseSkinPicker();
     } else if (!pause && state === 'paused') {
         state = 'play';
         $pauseScreen.style.display = 'none';
@@ -681,7 +698,7 @@ function buildSkinPicker() {
 }
 
 $('play-btn').onclick   = showLobby;
-$('retry-btn').onclick  = showLobby;
+$('retry-btn').onclick  = () => startGame(); // instant restart — no lobby
 $('start-btn').onclick  = startGame;
 $('resume-btn').onclick = () => togglePause(false);
 $('pause-btn').onclick  = () => { if (state === 'play') togglePause(true); else if (state === 'paused') togglePause(false); };
@@ -691,6 +708,25 @@ $('quit-btn').onclick   = () => {
     $hud.style.display = 'none';
     $startScreen.style.display = '';
 };
+
+function buildPauseSkinPicker() {
+    const container = $('pause-skin-picker');
+    if (!container) return;
+    let html = '';
+    SKINS.forEach((skin, i) => {
+        const sel = i === selectedSkin ? ' selected' : '';
+        html += `<div class="pause-skin${sel}" data-skin="${i}" style="background:${skin.body};color:${skin.body}" title="${skin.name}"></div>`;
+    });
+    container.innerHTML = html;
+    container.querySelectorAll('.pause-skin').forEach(el => {
+        el.onclick = () => {
+            selectedSkin = +el.dataset.skin;
+            localStorage.setItem('ns_skin', selectedSkin);
+            container.querySelectorAll('.pause-skin').forEach(e => e.classList.remove('selected'));
+            el.classList.add('selected');
+        };
+    });
+}
 
 // ─── PLAYER ─────────────────────────────────────────────────
 function updatePlayer() {
@@ -2223,14 +2259,19 @@ function drawNovas() {
 // ─── Overlays ───────────────────────────────────────────────
 function drawJoystick() {
     if (!joy.active) return;
+    const baseR = Math.max(50, Math.min(W, H) * 0.07); // scale with screen
+    const knobR = Math.max(18, baseR * 0.36);
+    // Clamp joystick origin to safe screen edges
+    const sx = clamp(joy.sx, baseR + 10, W - baseR - 10);
+    const sy = clamp(joy.sy, baseR + 10, H - baseR - 10);
     ctx.save();
-    ctx.globalAlpha = 0.2;
+    ctx.globalAlpha = 0.25;
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(joy.sx, joy.sy, 50, 0, TAU); ctx.stroke();
-    ctx.globalAlpha = 0.4;
+    ctx.beginPath(); ctx.arc(sx, sy, baseR, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 0.45;
     ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(joy.sx + joy.dx * 50, joy.sy + joy.dy * 50, 18, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + joy.dx * baseR, sy + joy.dy * baseR, knobR, 0, TAU); ctx.fill();
     ctx.restore();
 }
 

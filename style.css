@@ -197,6 +197,13 @@ canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
 .glow-btn.secondary{background:linear-gradient(135deg,#374151,#4b5563,#6b7280);box-shadow:0 0 16px rgba(107,114,128,0.3),inset 0 1px 0 rgba(255,255,255,0.1);margin-top:14px;padding:12px 36px;font-size:clamp(12px,2.5vw,16px);letter-spacing:3px}
 .glow-btn.secondary:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 28px rgba(107,114,128,0.5)}
 
+/* Pause skin picker */
+.pause-skin-label{font-family:'Orbitron',sans-serif;font-size:11px;color:#64748b;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase}
+.pause-skin-row{display:flex;gap:12px;justify-content:center;margin-bottom:20px}
+.pause-skin{width:36px;height:36px;border-radius:50%;cursor:pointer;border:2.5px solid rgba(255,255,255,0.1);transition:all .2s;box-shadow:none}
+.pause-skin:hover{transform:scale(1.15);border-color:rgba(255,255,255,0.4)}
+.pause-skin.selected{border-color:#fff;box-shadow:0 0 12px currentColor,0 0 24px currentColor;transform:scale(1.1)}
+
 /* ===== RESPONSIVE FIXES FOR NEW SCREENS ===== */
 @media(max-width:500px){
     #skin-picker{gap:14px}

@@ -6,7 +6,7 @@
     <title>NEON SWARM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
     <canvas id="game"></canvas>
@@ -58,6 +58,8 @@
         <div class="overlay-content">
             <h2 class="pause-title">PAUSED</h2>
             <p class="pause-hint">Press <kbd>ESC</kbd> to resume</p>
+            <div class="pause-skin-label">CHANGE SKIN</div>
+            <div id="pause-skin-picker" class="pause-skin-row"></div>
             <button class="glow-btn" id="resume-btn"><span class="btn-shimmer"></span>▶ RESUME</button>
             <button class="glow-btn secondary" id="quit-btn"><span class="btn-shimmer"></span>✕ QUIT TO MENU</button>
         </div>
@@ -75,6 +77,6 @@
     <!-- Boss Warning -->
     <div id="boss-warning" style="display:none">⚠ BOSS INCOMING ⚠</div>
 
-    <script src="game.js?v=10"></script>
+    <script src="game.js?v=11"></script>
 </body>
 </html>

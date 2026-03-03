@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Neon Swarm Cover Generator</title>
+<style>
+  body { background: #111; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+  canvas { display: block; margin: 20px auto; border: 1px solid #333; cursor: pointer; }
+  h2 { color: #0ff; margin-top: 40px; }
+  p { color: #aaa; font-size: 14px; }
+  .note { color: #0f0; font-size: 16px; margin-bottom: 30px; }
+</style>
+</head>
+<body>
+<h1>Neon Swarm — Cover Image Generator</h1>
+<p class="note">Click each image to download it as PNG</p>
+
+<h2>Landscape 16:9 (1920x1080)</h2>
+<canvas id="landscape" width="1920" height="1080"></canvas>
+
+<h2>Portrait 2:3 (800x1200)</h2>
+<canvas id="portrait" width="800" height="1200"></canvas>
+
+<h2>Square 1:1 (800x800)</h2>
+<canvas id="square" width="800" height="800"></canvas>
+
+<script>
+function drawCover(canvasId) {
+  const cvs = document.getElementById(canvasId);
+  const ctx = cvs.getContext('2d');
+  const W = cvs.width, H = cvs.height;
+  const scale = Math.min(W, H) / 800; // base scale
+
+  // Background gradient
+  const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.7);
+  bg.addColorStop(0, '#1a0a2e');
+  bg.addColorStop(0.5, '#0d0221');
+  bg.addColorStop(1, '#000010');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines (neon floor effect)
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.strokeStyle = '#0ff';
+  ctx.lineWidth = 1;
+  const gridSize = 60 * scale;
+  for (let x = 0; x < W; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Scattered enemy shapes
+  const enemyColors = ['#ff004c', '#ff6600', '#ff00ff', '#ffcc00', '#ff3366'];
+  const rng = (min, max) => min + Math.random() * (max - min);
+  
+  for (let i = 0; i < 40; i++) {
+    const ex = rng(W * 0.05, W * 0.95);
+    const ey = rng(H * 0.1, H * 0.9);
+    const er = rng(8, 22) * scale;
+    const col = enemyColors[Math.floor(Math.random() * enemyColors.length)];
+    
+    ctx.save();
+    ctx.globalAlpha = rng(0.3, 0.7);
+    ctx.fillStyle = col;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 15 * scale;
+    
+    // Random shapes
+    const shapeType = Math.floor(Math.random() * 3);
+    if (shapeType === 0) {
+      // Circle
+      ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2); ctx.fill();
+    } else if (shapeType === 1) {
+      // Diamond
+      ctx.beginPath();
+      ctx.moveTo(ex, ey - er); ctx.lineTo(ex + er, ey);
+      ctx.lineTo(ex, ey + er); ctx.lineTo(ex - er, ey); ctx.closePath(); ctx.fill();
+    } else {
+      // Triangle
+      ctx.beginPath();
+      ctx.moveTo(ex, ey - er);
+      ctx.lineTo(ex + er * 0.87, ey + er * 0.5);
+      ctx.lineTo(ex - er * 0.87, ey + er * 0.5);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Draw player (center-ish, slightly below center)
+  const px = W / 2, py = H * 0.52;
+  const pr = 28 * scale;
+
+  // Player glow
+  ctx.save();
+  ctx.shadowColor = '#0ff';
+  ctx.shadowBlur = 40 * scale;
+  ctx.fillStyle = '#0ff';
+  ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // Player body
+  ctx.save();
+  ctx.fillStyle = '#0ff';
+  ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.fill();
+  // Inner lighter circle
+  ctx.fillStyle = '#66ffff';
+  ctx.beginPath(); ctx.arc(px, py, pr * 0.6, 0, Math.PI * 2); ctx.fill();
+  // White core
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(px, py, pr * 0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // Orbiting weapon (small circles around player)
+  for (let i = 0; i < 4; i++) {
+    const angle = (Math.PI * 2 / 4) * i - Math.PI / 4;
+    const ox = px + Math.cos(angle) * pr * 2.2;
+    const oy = py + Math.sin(angle) * pr * 2.2;
+    ctx.save();
+    ctx.fillStyle = '#ff0';
+    ctx.shadowColor = '#ff0';
+    ctx.shadowBlur = 10 * scale;
+    ctx.beginPath(); ctx.arc(ox, oy, 5 * scale, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Bolts flying outward
+  for (let i = 0; i < 8; i++) {
+    const angle = (Math.PI * 2 / 8) * i;
+    const dist = rng(80, 200) * scale;
+    const bx = px + Math.cos(angle) * dist;
+    const by = py + Math.sin(angle) * dist;
+    ctx.save();
+    ctx.fillStyle = '#00ffcc';
+    ctx.shadowColor = '#00ffcc';
+    ctx.shadowBlur = 8 * scale;
+    // Diamond bolt
+    const bs = 6 * scale;
+    ctx.beginPath();
+    ctx.moveTo(bx, by - bs * 1.5);
+    ctx.lineTo(bx + bs, by);
+    ctx.lineTo(bx, by + bs * 1.5);
+    ctx.lineTo(bx - bs, by);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Title: "NEON SWARM"
+  const titleSize = Math.floor(72 * scale);
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
+  // Title glow layers
+  ctx.font = `bold ${titleSize}px Arial, sans-serif`;
+  ctx.shadowColor = '#0ff';
+  ctx.shadowBlur = 30 * scale;
+  ctx.fillStyle = '#0ff';
+  ctx.fillText('NEON SWARM', W / 2, H * 0.18);
+  // Sharper layer
+  ctx.shadowBlur = 10 * scale;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('NEON SWARM', W / 2, H * 0.18);
+  ctx.restore();
+
+  // Subtitle
+  const subSize = Math.floor(24 * scale);
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = `${subSize}px Arial, sans-serif`;
+  ctx.fillStyle = '#ff66aa';
+  ctx.shadowColor = '#ff66aa';
+  ctx.shadowBlur = 10 * scale;
+  ctx.fillText('SURVIVE THE SWARM', W / 2, H * 0.18 + titleSize * 0.8);
+  ctx.restore();
+
+  // XP orbs scattered
+  for (let i = 0; i < 25; i++) {
+    const ox = rng(W * 0.05, W * 0.95);
+    const oy = rng(H * 0.25, H * 0.9);
+    const or2 = rng(3, 7) * scale;
+    ctx.save();
+    ctx.globalAlpha = rng(0.4, 0.8);
+    ctx.fillStyle = '#00ff88';
+    ctx.shadowColor = '#00ff88';
+    ctx.shadowBlur = 8 * scale;
+    ctx.beginPath(); ctx.arc(ox, oy, or2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Vignette
+  const vig = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.3, W/2, H/2, Math.max(W,H)*0.75);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.7)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+
+  // Click to download
+  cvs.onclick = () => {
+    const link = document.createElement('a');
+    link.download = `neon-swarm-${canvasId}.png`;
+    link.href = cvs.toDataURL('image/png');
+    link.click();
+  };
+}
+
+drawCover('landscape');
+drawCover('portrait');
+drawCover('square');
+</script>
+</body>
+</html>
