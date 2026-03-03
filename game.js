@@ -111,9 +111,22 @@ function requestRewardedAd() {
 }
 
 // ─── MOBILE DETECTION ────────────────────────────────────────
-const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-              || ('ontouchstart' in window && innerWidth < 1400)
-              || (navigator.maxTouchPoints > 1 && innerWidth < 1400);
+// Prefer CrazyGames SDK system info when available; fallback to UA heuristic
+let isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+             || ('ontouchstart' in window && innerWidth < 1400)
+             || (navigator.maxTouchPoints > 1 && innerWidth < 1400);
+
+// Override with SDK system info once available
+if (cgSDK) {
+    try {
+        const info = cgSDK.system.info;
+        if (info && info.device) {
+            isMobile = info.device.type === 'mobile' || info.device.type === 'tablet';
+        }
+    } catch(_) {}
+    // Notify SDK that the game is loading (initial assets/setup)
+    try { cgSDK.game.loadingStart(); } catch(_) {}
+}
 
 // ─── SKIN COLORS ─────────────────────────────────────────────
 const SKINS = [
@@ -748,16 +761,15 @@ function initGame() {
 }
 
 function showLobby() {
-    // If player already picked a skin before, skip lobby entirely
+    // CrazyGames requirement: land in gameplay within 1 click
+    // If player already picked a skin, skip lobby entirely
     if (hasPickedSkin) {
         startGame();
         return;
     }
-    state = 'lobby';
-    $startScreen.style.display = 'none';
-    $gameoverScreen.style.display = 'none';
-    $lobbyScreen.style.display = '';
-    buildSkinPicker();
+    // First-time users: auto-pick default skin and go straight to game
+    // They can change skin later from the pause menu
+    startGame();
 }
 
 function startGame() {
@@ -780,8 +792,11 @@ function startGame() {
     startAmbientDrone();
     if (actx && actx.state === 'suspended') actx.resume();
 
-    // Notify CrazyGames SDK that gameplay has started
-    if (cgSDK) try { cgSDK.game.gameplayStart(); } catch (_) {}
+    // Notify CrazyGames SDK that gameplay has started (also serves as loading-stop marker)
+    if (cgSDK) {
+        try { cgSDK.game.loadingStop(); } catch (_) {}
+        try { cgSDK.game.gameplayStart(); } catch (_) {}
+    }
 }
 
 function togglePause(pause) {
@@ -826,6 +841,7 @@ $('quit-btn').onclick   = () => {
     $pauseScreen.style.display = 'none';
     $hud.style.display = 'none';
     $startScreen.style.display = '';
+    if (cgSDK) try { cgSDK.game.gameplayStop(); } catch (_) {}
 };
 
 // ─── REWARDED AD: 2× SCORE ON DEATH SCREEN ─────────────────
@@ -2587,15 +2603,32 @@ function render() {
     }
 }
 
-// ─── GAME LOOP ──────────────────────────────────────────────
-function gameLoop() {
-    update();
+// ─── GAME LOOP (fixed timestep — safe for 60/120/144/165 Hz) ────
+const STEP = 1000 / 60;        // 16.667 ms per physics tick
+let lastTime = 0;
+let accumulator = 0;
 
+function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    let elapsed = timestamp - lastTime;
+    lastTime = timestamp;
+
+    // Clamp to avoid spiral-of-death on tab-switch or lag spike
+    if (elapsed > 200) elapsed = 200;
+
+    accumulator += elapsed;
+
+    // Run physics in fixed steps (exactly 60 ticks/second)
+    while (accumulator >= STEP) {
+        update();
+        accumulator -= STEP;
+    }
+
+    // Render once per display frame
     if (state === 'menu' || state === 'lobby') {
         ctx.fillStyle = '#060612';
         ctx.fillRect(0, 0, W, H);
         drawBgStars();
-        frame++;
     } else if (state === 'play' || state === 'dead' || state === 'paused') {
         render();
     }
@@ -2605,4 +2638,4 @@ function gameLoop() {
 
 // Boot
 initGame();
-gameLoop();
+requestAnimationFrame(gameLoop);
