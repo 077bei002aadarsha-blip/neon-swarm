@@ -155,9 +155,6 @@ const DPR = isMobile ? Math.min(devicePixelRatio, 1) : 1;
 function resize() {
     W = innerWidth;
     H = innerHeight;
-    if (isMobile && window.visualViewport) {
-        H = Math.min(H, window.visualViewport.height);
-    }
     C.width  = W * DPR;
     C.height = H * DPR;
     C.style.width  = W + 'px';
@@ -798,7 +795,7 @@ function showOnboarding() {
     const el = $('onboard-overlay');
     const txt = $('onboard-text');
     if (!el || !txt) return;
-    if (isMobile) {
+    if (false) {
         txt.innerHTML = 'TOUCH & DRAG TO MOVE<br><small style="font-size:0.7em;opacity:0.6">weapons fire automatically</small>';
     } else {
         txt.innerHTML = '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> TO MOVE<br><small style="font-size:0.7em;opacity:0.6">weapons fire automatically &bull; <kbd>P</kbd> pause</small>';
@@ -1694,7 +1691,7 @@ initBgStars();
 
 function drawBgStars() {
     // Nebulae (skip on mobile — gradient-heavy)
-    if (!isMobile) {
+    if (true) {
         for (const n of nebulae) {
             const x = ((n.x * W * 4 - cam.x * n.speed) % W + W) % W;
             const y = ((n.y * H * 4 - cam.y * n.speed) % H + H) % H;
@@ -1723,7 +1720,7 @@ function drawBgStars() {
         ctx.fill();
 
         // Cross flare on bright stars (skip on mobile)
-        if (!isMobile && s.r > 1.5) {
+        if (true && s.r > 1.5) {
             ctx.globalAlpha = alpha * 0.3;
             ctx.strokeStyle = s.col;
             ctx.lineWidth = 0.5;
@@ -1737,7 +1734,7 @@ function drawBgStars() {
     ctx.globalAlpha = 1;
 
     // Floating dust (skip on mobile)
-    if (!isMobile) {
+    if (true) {
         for (const d of ambientParts) {
             const x = ((d.x * W * 3 - cam.x * d.spd) % W + W) % W;
             const y = ((d.y * H * 3 - cam.y * d.spd) % H + H) % H;
@@ -1754,7 +1751,7 @@ function drawBgStars() {
 // ─── Grid ───────────────────────────────────────────────────
 function drawGrid() {
     // On mobile, only draw major grid lines (much fewer draw calls)
-    if (isMobile) {
+    if (false) {
         const MAJ = 200;
         const mx = ((-cam.x % MAJ) + MAJ) % MAJ;
         const my = ((-cam.y % MAJ) + MAJ) % MAJ;
@@ -1806,7 +1803,7 @@ function drawPlayer() {
     const angle = Math.atan2(P.vy, P.vx);
     const skin = SKINS[selectedSkin];
 
-    if (isMobile) {
+    if (false) {
         // ── MOBILE: ultra-minimal player (no trail, no ring, no aura, no gradients) ──
         ctx.save();
         ctx.fillStyle = skin.body;
@@ -1909,7 +1906,7 @@ function drawOrbiters() {
         const px  = P.x - cam.x, py = P.y - cam.y;
 
         // Orbit path (skip on mobile)
-        if (!isMobile) {
+        if (true) {
             ctx.save();
             ctx.globalAlpha = 0.06;
             ctx.strokeStyle = def.col;
@@ -1926,7 +1923,7 @@ function drawOrbiters() {
             const by = P.y + Math.sin(a) * rad - cam.y;
 
             // Motion trail (skip on mobile)
-            if (!isMobile) {
+            if (true) {
                 ctx.save();
                 ctx.globalAlpha = 0.15;
                 const prevA = a - def.spd[lv] * 5;
@@ -1943,13 +1940,13 @@ function drawOrbiters() {
             ctx.save();
             ctx.translate(bx, by);
             ctx.rotate(a + frame * 0.15);
-            if (!isMobile) { ctx.shadowColor = def.col; ctx.shadowBlur = 18; }
+            if (true) { ctx.shadowColor = def.col; ctx.shadowBlur = 18; }
             ctx.fillStyle = def.col;
             ctx.beginPath();
             ctx.moveTo(0, -12); ctx.lineTo(6, 0); ctx.lineTo(0, 12); ctx.lineTo(-6, 0);
             ctx.closePath();
             ctx.fill();
-            if (!isMobile) {
+            if (true) {
                 ctx.globalAlpha = 0.6;
                 ctx.fillStyle = '#fff';
                 ctx.beginPath(); ctx.arc(0, 0, 3, 0, TAU); ctx.fill();
@@ -1969,7 +1966,7 @@ function drawEnemies() {
         let r = e.r;
 
         // Threat aura (skip on mobile)
-        if (!isMobile && (e.type === 'boss' || e.type === 'brute')) {
+        if (true && (e.type === 'boss' || e.type === 'brute')) {
             ctx.globalAlpha = 0.12;
             ctx.strokeStyle = e.col;
             ctx.lineWidth = 2;
@@ -1979,7 +1976,7 @@ function drawEnemies() {
 
         // Boss glow
         if (e.type === 'boss') {
-            if (!isMobile) { ctx.shadowColor = e.hit > 0 ? '#fff' : e.col; ctx.shadowBlur = e.hit > 0 ? 18 : 8; }
+            if (true) { ctx.shadowColor = e.hit > 0 ? '#fff' : e.col; ctx.shadowBlur = e.hit > 0 ? 18 : 8; }
             r += Math.sin(frame * 0.05) * 3;
         }
 
@@ -2068,7 +2065,7 @@ function drawEnemies() {
             const hpPct = clamp(e.hp / e.maxHp, 0, 1);
             const barCol = hpPct > 0.5 ? e.col : (hpPct > 0.25 ? '#f97316' : '#ef4444');
             ctx.fillStyle = barCol;
-            if (!isMobile) { ctx.shadowColor = barCol; ctx.shadowBlur = 8; }
+            if (true) { ctx.shadowColor = barCol; ctx.shadowBlur = 8; }
             ctx.beginPath(); ctx.roundRect(sx - bw / 2 + 1, sy - r - 17, (bw - 2) * hpPct, bh - 2, 2); ctx.fill();
         }
 
@@ -2090,7 +2087,7 @@ function drawProjectiles() {
 
         if (p.type === 'missile') {
             // Engine glow (skip on mobile)
-            if (!isMobile) {
+            if (true) {
                 ctx.globalAlpha = 0.25;
                 const eGrad = ctx.createRadialGradient(-6, 0, 0, -6, 0, 10);
                 eGrad.addColorStop(0, p.col);
@@ -2106,14 +2103,14 @@ function drawProjectiles() {
             ctx.closePath();
             ctx.fill();
 
-            if (!isMobile) {
+            if (true) {
                 ctx.fillStyle = '#fff';
                 ctx.globalAlpha = 0.6;
                 ctx.beginPath(); ctx.arc(4, 0, 2, 0, TAU); ctx.fill();
             }
         } else {
             // Bolt — simpler on mobile
-            if (isMobile) {
+            if (false) {
                 ctx.beginPath(); ctx.arc(0, 0, p.r, 0, TAU); ctx.fill();
             } else {
                 ctx.scale(1.5, 1);
@@ -2172,7 +2169,7 @@ function drawHealthOrbs() {
         if (h.life < 120 && Math.floor(h.life / 6) % 2 === 0) continue;
 
         // Ground glow (skip on mobile)
-        if (!isMobile) {
+        if (true) {
             ctx.save();
             ctx.globalAlpha = 0.15;
             ctx.fillStyle = '#ef4444';
@@ -2224,14 +2221,14 @@ function drawPowerUps() {
         ctx.beginPath(); ctx.ellipse(sx, pu.y - cam.y + 12, r * 1.8, r * 0.6, 0, 0, TAU); ctx.stroke();
 
         // Ground glow (skip on mobile)
-        if (!isMobile) {
+        if (true) {
             ctx.globalAlpha = 0.1;
             ctx.fillStyle = pu.col;
             ctx.beginPath(); ctx.arc(sx, sy, r * 2.5, 0, TAU); ctx.fill();
         }
 
         // Light beam (skip on mobile)
-        if (!isMobile) {
+        if (true) {
             ctx.globalAlpha = 0.06 + Math.sin(pu.pulse * 2) * 0.03;
             ctx.fillStyle = pu.col;
             ctx.beginPath();
@@ -2263,7 +2260,7 @@ function drawPowerUps() {
         ctx.fillText(pu.label, sx, sy + r + 14);
 
         // Epic sparkles (skip on mobile)
-        if (!isMobile && pu.rarity === 'epic') {
+        if (true && pu.rarity === 'epic') {
             ctx.globalAlpha = 0.3 + Math.sin(pu.pulse * 3) * 0.2;
             ctx.fillStyle = '#fff';
             for (let i = 0; i < 4; i++) {
@@ -2321,7 +2318,7 @@ function drawLightning() {
         const alpha = l.life / 15;
         ctx.save();
 
-        if (isMobile) {
+        if (false) {
             // ── MOBILE: single thin core line only, no glow, no impact circles ──
             ctx.globalAlpha = alpha;
             ctx.strokeStyle = l.col;
@@ -2386,7 +2383,7 @@ function drawNovas() {
 
         ctx.save();
 
-        if (isMobile) {
+        if (false) {
             // ── MOBILE: single expanding ring, no gradient fill ──
             ctx.globalAlpha = alpha * 0.8;
             ctx.strokeStyle = n.col;
@@ -2435,7 +2432,7 @@ function drawJoystick() {
 }
 
 function drawMagnetRange() {
-    if (isMobile) return; // skip decorative gradient on mobile
+    if (false) return; // skip decorative gradient on mobile
     const px = P.x - cam.x, py = P.y - cam.y;
     ctx.save();
     const mg = ctx.createRadialGradient(px, py, P.magnet * 0.7, px, py, P.magnet);
@@ -2468,7 +2465,7 @@ function drawEdgeIndicators() {
         ctx.translate(ex, ey);
         ctx.rotate(a);
         ctx.fillStyle = e.col;
-        if (!isMobile) { ctx.shadowColor = e.col; ctx.shadowBlur = 10; }
+        if (true) { ctx.shadowColor = e.col; ctx.shadowBlur = 10; }
         ctx.beginPath();
         ctx.moveTo(12, 0); ctx.lineTo(-6, -7); ctx.lineTo(-6, 7);
         ctx.closePath();
@@ -2518,7 +2515,7 @@ function render() {
     }
 
     // Low-HP vignette (skip on mobile — radialGradient fill each frame is heavy)
-    if (!isMobile && P.hp > 0) {
+    if (true && P.hp > 0) {
         const hpRatio = clamp(P.hp / P.maxHp, 0, 1);
         if (hpRatio < 0.4) {
             ctx.save();
@@ -2551,7 +2548,7 @@ function render() {
         ctx.font = "bold 32px 'Orbitron', sans-serif";
         const col = kills >= 200 ? '#f472b6' : (kills >= 100 ? '#a78bfa' : '#fbbf24');
         ctx.fillStyle = col;
-        if (!isMobile) { ctx.shadowColor = col; ctx.shadowBlur = 25; }
+        if (true) { ctx.shadowColor = col; ctx.shadowBlur = 25; }
         ctx.globalAlpha = 1 - t;
         ctx.fillText(`${kills} KILLS!`, W / 2, H / 2 + 60 - t * 30);
         ctx.restore();
