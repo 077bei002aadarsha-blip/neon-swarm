@@ -1819,14 +1819,13 @@ function drawPlayer() {
     const skin = SKINS[selectedSkin];
 
     if (isMobile) {
-        // ── MOBILE: ultra-minimal player (no trail, no ring, no aura, no gradients) ──
+        // ── MOBILE: ultra-minimal player (no trail, no ring, no aura, no gradients, no alpha) ──
         ctx.save();
         ctx.fillStyle = skin.body;
         ctx.beginPath(); ctx.arc(sx, sy, P.r, 0, TAU); ctx.fill();
-        // Small highlight
-        ctx.globalAlpha = 0.4;
+        // Very small white dot for definition (solid, no alpha)
         ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(sx - 2, sy - 2, P.r * 0.35, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx - 2, sy - 2, 2, 0, TAU); ctx.fill();
         ctx.restore();
         // Eyes
         ctx.fillStyle = '#060612';
@@ -1856,18 +1855,20 @@ function drawPlayer() {
         ctx.restore();
     }
 
-    // Energy ring
-    ctx.save();
-    ctx.globalAlpha = 0.12 + Math.sin(frame * 0.08) * 0.05;
-    const ringR = P.r + 8 + Math.sin(frame * 0.12) * 3;
-    ctx.strokeStyle = skin.glow;
-    ctx.lineWidth = 1.5;
-    ctx.shadowColor = skin.glow; ctx.shadowBlur = 15;
-    ctx.beginPath(); ctx.arc(sx, sy, ringR, 0, TAU); ctx.stroke();
-    ctx.restore();
+    // Energy ring (desktop only)
+    if (!isMobile) {
+        ctx.save();
+        ctx.globalAlpha = 0.12 + Math.sin(frame * 0.08) * 0.05;
+        const ringR = P.r + 8 + Math.sin(frame * 0.12) * 3;
+        ctx.strokeStyle = skin.glow;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = skin.glow; ctx.shadowBlur = 15;
+        ctx.beginPath(); ctx.arc(sx, sy, ringR, 0, TAU); ctx.stroke();
+        ctx.restore();
+    }
 
-    // Speed aura
-    if (speed > 1) {
+    // Speed aura (desktop only)
+    if (!isMobile && speed > 1) {
         ctx.save();
         const aGrad = ctx.createRadialGradient(sx, sy, P.r, sx, sy, P.r + 18);
         aGrad.addColorStop(0, hexRgba(skin.body, 0.15));
@@ -1879,7 +1880,7 @@ function drawPlayer() {
 
     // Body
     ctx.save();
-    ctx.shadowColor = skin.glow; ctx.shadowBlur = 30;
+    if (!isMobile) { ctx.shadowColor = skin.glow; ctx.shadowBlur = 30; }
     const bGrad = ctx.createRadialGradient(sx - 3, sy - 3, 0, sx, sy, P.r);
     bGrad.addColorStop(0,   '#fff');
     bGrad.addColorStop(0.3, skin.light);
@@ -1888,12 +1889,14 @@ function drawPlayer() {
     ctx.fillStyle = bGrad;
     ctx.beginPath(); ctx.arc(sx, sy, P.r, 0, TAU); ctx.fill();
 
-    ctx.globalAlpha = 0.35;
-    const hGrad = ctx.createRadialGradient(sx - 3, sy - 4, 1, sx, sy, P.r * 0.7);
-    hGrad.addColorStop(0, '#fff');
-    hGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = hGrad;
-    ctx.beginPath(); ctx.arc(sx, sy, P.r * 0.7, 0, TAU); ctx.fill();
+    if (!isMobile) {
+        ctx.globalAlpha = 0.35;
+        const hGrad = ctx.createRadialGradient(sx - 3, sy - 4, 1, sx, sy, P.r * 0.7);
+        hGrad.addColorStop(0, '#fff');
+        hGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = hGrad;
+        ctx.beginPath(); ctx.arc(sx, sy, P.r * 0.7, 0, TAU); ctx.fill();
+    }
     ctx.restore();
 
     // Eyes
@@ -1902,11 +1905,13 @@ function drawPlayer() {
         const ex = sx + Math.cos(angle + s * 0.4) * 6;
         const ey = sy + Math.sin(angle + s * 0.4) * 6;
         ctx.beginPath(); ctx.arc(ex, ey, 2.5, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.globalAlpha = 0.5;
-        ctx.beginPath(); ctx.arc(ex + 0.8, ey - 0.8, 1, 0, TAU); ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#060612';
+        if (!isMobile) {
+            ctx.fillStyle = '#fff';
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath(); ctx.arc(ex + 0.8, ey - 0.8, 1, 0, TAU); ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#060612';
+        }
     }
 }
 
@@ -2040,11 +2045,13 @@ function drawEnemies() {
         }
         ctx.fill();
 
-        // Highlight dot
-        ctx.globalAlpha = 0.22;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(sx - r * 0.2, sy - r * 0.2, r * 0.3, 0, TAU); ctx.fill();
-        ctx.globalAlpha = 1;
+        // Highlight dot (skip on mobile)
+        if (!isMobile) {
+            ctx.globalAlpha = 0.22;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(sx - r * 0.2, sy - r * 0.2, r * 0.3, 0, TAU); ctx.fill();
+            ctx.globalAlpha = 1;
+        }
 
         // Eyes (walker & sprinter)
         if (e.type === 'walker' || e.type === 'sprinter') {
@@ -2212,11 +2219,13 @@ function drawHealthOrbs() {
         ctx.fillRect(sx - ch / 2, sy - cw / 2, ch, cw);
 
         // Heal amount
-        ctx.globalAlpha = 0.6 + Math.sin(h.pulse * 1.5) * 0.3;
-        ctx.font = "bold 10px 'Orbitron', sans-serif";
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#fca5a5';
-        ctx.fillText('+' + h.heal, sx, sy - r - 6);
+        if (!isMobile) {
+            ctx.globalAlpha = 0.6 + Math.sin(h.pulse * 1.5) * 0.3;
+            ctx.font = "bold 10px 'Orbitron', sans-serif";
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#fca5a5';
+            ctx.fillText('+' + h.heal, sx, sy - r - 6);
+        }
 
         ctx.restore();
     }
@@ -2235,11 +2244,13 @@ function drawPowerUps() {
 
         ctx.save();
 
-        // Ground ring
-        ctx.globalAlpha = 0.15 + Math.sin(pu.pulse) * 0.05;
-        ctx.strokeStyle = pu.col;
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.ellipse(sx, pu.y - cam.y + 12, r * 1.8, r * 0.6, 0, 0, TAU); ctx.stroke();
+        // Ground ring (skip on mobile)
+        if (!isMobile) {
+            ctx.globalAlpha = 0.15 + Math.sin(pu.pulse) * 0.05;
+            ctx.strokeStyle = pu.col;
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.ellipse(sx, pu.y - cam.y + 12, r * 1.8, r * 0.6, 0, 0, TAU); ctx.stroke();
+        }
 
         // Ground glow (skip on mobile)
         if (!isMobile) {
@@ -2263,11 +2274,13 @@ function drawPowerUps() {
         ctx.fillStyle = pu.col;
         ctx.beginPath(); ctx.arc(sx, sy, r, 0, TAU); ctx.fill();
 
-        // Core highlight
-        ctx.globalAlpha = 0.6;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(sx - 2, sy - 2, r * 0.4, 0, TAU); ctx.fill();
-        ctx.globalAlpha = 1;
+        // Core highlight (skip on mobile)
+        if (!isMobile) {
+            ctx.globalAlpha = 0.6;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(sx - 2, sy - 2, r * 0.4, 0, TAU); ctx.fill();
+            ctx.globalAlpha = 1;
+        }
 
         // Icon (canvas-drawn shape)
         ctx.shadowBlur = 0;
@@ -2298,6 +2311,7 @@ function drawPowerUps() {
 
 // ─── Particles & Effects ────────────────────────────────────
 function drawParticles() {
+    if (isMobile) return; // Skip all particles on mobile to reduce alpha blending
     for (const p of parts) {
         const sx = p.x - cam.x, sy = p.y - cam.y;
         if (sx < -10 || sx > W + 10 || sy < -10 || sy > H + 10) continue;
