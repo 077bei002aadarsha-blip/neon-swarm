@@ -36,16 +36,24 @@ let isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
               || ('ontouchstart' in window && innerWidth < 1400)
               || (navigator.maxTouchPoints > 1 && innerWidth < 1400);
 
+// Force mobile for iPhone/iPad regardless of other checks
+if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    isMobile = true;
+}
+
 // Upgrade detection once CrazyGames SDK is ready
 function updateDeviceDetection() {
     if (cgSDK) {
         try {
             const info = cgSDK.system.info;
             if (info && info.device) {
-                isMobile = info.device.type === 'mobile' || info.device.type === 'tablet';
+                const sdkMobile = info.device.type === 'mobile' || info.device.type === 'tablet';
+                isMobile = sdkMobile || isMobile; // Keep true if either detection says mobile
+                console.log('[Mobile Detection] SDK type:', info.device.type, '| isMobile:', isMobile);
             }
         } catch (_) {}
     }
+    console.log('[Mobile Detection] Final isMobile:', isMobile, '| UA:', navigator.userAgent.substring(0, 50));
 }
 
 // ─── SKIN COLORS ─────────────────────────────────────────────
@@ -1708,25 +1716,32 @@ function drawBgStars() {
         const alpha = s.a + Math.sin(s.twinkle) * 0.15;
         if (alpha < 0.05) continue;
 
-        ctx.globalAlpha = clamp(alpha, 0, 1);
-        ctx.fillStyle = s.col;
-        ctx.beginPath();
-        ctx.arc(x, y, s.r, 0, TAU);
-        ctx.fill();
-
-        // Cross flare on bright stars (skip on mobile)
-        if (!isMobile && s.r > 1.5) {
-            ctx.globalAlpha = alpha * 0.3;
-            ctx.strokeStyle = s.col;
-            ctx.lineWidth = 0.5;
-            const cr = s.r * 4;
+        if (isMobile) {
+            // Mobile: solid fill, no alpha blending
+            ctx.fillStyle = s.col;
+            ctx.fillRect(x - s.r, y - s.r, s.r * 2, s.r * 2);
+        } else {
+            // Desktop: full effect
+            ctx.globalAlpha = clamp(alpha, 0, 1);
+            ctx.fillStyle = s.col;
             ctx.beginPath();
-            ctx.moveTo(x - cr, y); ctx.lineTo(x + cr, y);
-            ctx.moveTo(x, y - cr); ctx.lineTo(x, y + cr);
-            ctx.stroke();
+            ctx.arc(x, y, s.r, 0, TAU);
+            ctx.fill();
+
+            // Cross flare on bright stars
+            if (s.r > 1.5) {
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.strokeStyle = s.col;
+                ctx.lineWidth = 0.5;
+                const cr = s.r * 4;
+                ctx.beginPath();
+                ctx.moveTo(x - cr, y); ctx.lineTo(x + cr, y);
+                ctx.moveTo(x, y - cr); ctx.lineTo(x, y + cr);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
         }
     }
-    ctx.globalAlpha = 1;
 
     // Floating dust (skip on mobile)
     if (!isMobile) {
@@ -1960,8 +1975,20 @@ function drawEnemies() {
         ctx.save();
         let r = e.r;
 
-        // Threat aura (skip on mobile)
-        if (!isMobile && (e.type === 'boss' || e.type === 'brute')) {
+        if (isMobile) {
+            // MOBILE: Ultra-simple filled circle only
+            ctx.fillStyle = e.hit > 0 ? '#fff' : e.col;
+            ctx.beginPath();
+            ctx.arc(sx, sy, r, 0, TAU);
+            ctx.fill();
+            ctx.restore();
+            continue; // Skip all desktop rendering below
+        }
+
+        // DESKTOP: Full rendering with shapes, eyes, glows
+
+        // Threat aura
+        if (e.type === 'boss' || e.type === 'brute') {
             ctx.globalAlpha = 0.12;
             ctx.strokeStyle = e.col;
             ctx.lineWidth = 2;
@@ -1971,7 +1998,8 @@ function drawEnemies() {
 
         // Boss glow
         if (e.type === 'boss') {
-            if (!isMobile) { ctx.shadowColor = e.hit > 0 ? '#fff' : e.col; ctx.shadowBlur = e.hit > 0 ? 18 : 8; }
+            ctx.shadowColor = e.hit > 0 ? '#fff' : e.col; 
+            ctx.shadowBlur = e.hit > 0 ? 18 : 8;
             r += Math.sin(frame * 0.05) * 3;
         }
 
@@ -2042,16 +2070,18 @@ function drawEnemies() {
             }
         }
 
-        // Boss HP bar
+        // Boss HP bar (skip decorative rings on mobile)
         if (e.type === 'boss') {
-            ctx.save();
-            ctx.globalAlpha = 0.25;
-            ctx.strokeStyle = e.col;
-            ctx.lineWidth = 2;
-            const ba = frame * 0.02;
-            ctx.beginPath(); ctx.arc(sx, sy, r + 10, ba, ba + PI * 1.2); ctx.stroke();
-            ctx.beginPath(); ctx.arc(sx, sy, r + 10, ba + PI, ba + PI * 2.2); ctx.stroke();
-            ctx.restore();
+            if (!isMobile) {
+                ctx.save();
+                ctx.globalAlpha = 0.25;
+                ctx.strokeStyle = e.col;
+                ctx.lineWidth = 2;
+                const ba = frame * 0.02;
+                ctx.beginPath(); ctx.arc(sx, sy, r + 10, ba, ba + PI * 1.2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(sx, sy, r + 10, ba + PI, ba + PI * 2.2); ctx.stroke();
+                ctx.restore();
+            }
 
             const bw = 70, bh = 7;
             ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -2139,13 +2169,16 @@ function drawGems() {
         ctx.closePath();
         ctx.fill();
 
-        ctx.globalAlpha = 0.5;
-        ctx.fillStyle = '#a7f3d0';
-        ctx.beginPath();
-        ctx.moveTo(0, -r * 0.6); ctx.lineTo(r * 0.35, 0);
-        ctx.lineTo(0, r * 0.6);  ctx.lineTo(-r * 0.35, 0);
-        ctx.closePath();
-        ctx.fill();
+        // Highlight (skip alpha blend on mobile)
+        if (!isMobile) {
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = '#a7f3d0';
+            ctx.beginPath();
+            ctx.moveTo(0, -r * 0.6); ctx.lineTo(r * 0.35, 0);
+            ctx.lineTo(0, r * 0.6);  ctx.lineTo(-r * 0.35, 0);
+            ctx.closePath();
+            ctx.fill();
+        }
 
         ctx.restore();
     }
