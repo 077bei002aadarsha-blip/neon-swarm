@@ -164,6 +164,7 @@ function resize() {
     C.height = H * DPR;
     C.style.width  = W + 'px';
     C.style.height = H + 'px';
+    ctx.imageSmoothingEnabled = !isMobile;
     if (DPR !== 1) ctx.scale(DPR, DPR);
 }
 addEventListener('resize', resize);
@@ -176,6 +177,14 @@ const randInt = (a, b) => Math.floor(rand(a, b + 1));
 const dist  = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const lerp  = (a, b, t) => a + (b - a) * t;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function resetCtxState() {
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+    ctx.filter = 'none';
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.setLineDash([]);
+}
 function hexRgba(hex, a) {
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
     return `rgba(${r},${g},${b},${a})`;
@@ -2511,32 +2520,46 @@ function drawEdgeIndicators() {
 
 // ─── MAIN RENDER ────────────────────────────────────────────
 function render() {
+    resetCtxState();
     ctx.fillStyle = '#060612';
-    ctx.shadowBlur = 0; // safety reset every frame
-    ctx.shadowColor = 'transparent';
     ctx.fillRect(0, 0, W, H);
     drawBgStars();
+    if (isMobile) resetCtxState();
 
     ctx.save();
     if (shake > 0.5) ctx.translate(rand(-shake, shake), rand(-shake, shake));
 
     drawGrid();
+    if (isMobile) resetCtxState();
     drawMagnetRange();
+    if (isMobile) resetCtxState();
     drawPowerUps();
+    if (isMobile) resetCtxState();
     drawHealthOrbs();
+    if (isMobile) resetCtxState();
     drawGems();
+    if (isMobile) resetCtxState();
     drawNovas();
+    if (isMobile) resetCtxState();
     drawLightning();
+    if (isMobile) resetCtxState();
     drawEnemies();
+    if (isMobile) resetCtxState();
     drawProjectiles();
+    if (isMobile) resetCtxState();
     drawOrbiters();
+    if (isMobile) resetCtxState();
     drawParticles();
+    if (isMobile) resetCtxState();
     drawDmgNums();
+    if (isMobile) resetCtxState();
     drawPlayer();
+    if (isMobile) resetCtxState();
 
     ctx.restore();
 
     drawJoystick();
+    if (isMobile) resetCtxState();
 
     // Damage flash overlay (reduced on mobile)
     if (flashAlpha > 0) {
