@@ -32,9 +32,15 @@ let cgSDK = null;
 
 // ─── MOBILE DETECTION ────────────────────────────────────────
 // Prefer CrazyGames system info if available, fallback to heuristics
-let isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-              || ('ontouchstart' in window && innerWidth < 1400)
-              || (navigator.maxTouchPoints > 1 && innerWidth < 1400);
+const MOBILE_WIDTH = 770;
+function computeMobileFromViewport() {
+    const vw = window.visualViewport ? window.visualViewport.width : innerWidth;
+    return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+        || ('ontouchstart' in window && vw < 1400)
+        || (navigator.maxTouchPoints > 1 && vw < 1400)
+        || vw < MOBILE_WIDTH;
+}
+let isMobile = computeMobileFromViewport();
 
 // Upgrade detection once CrazyGames SDK is ready
 function updateDeviceDetection() {
@@ -42,7 +48,8 @@ function updateDeviceDetection() {
         try {
             const info = cgSDK.system.info;
             if (info && info.device) {
-                isMobile = info.device.type === 'mobile' || info.device.type === 'tablet';
+                const sdkMobile = info.device.type === 'mobile' || info.device.type === 'tablet';
+                isMobile = sdkMobile || computeMobileFromViewport();
             }
         } catch (_) {}
     }
@@ -156,6 +163,7 @@ function resize() {
     C.style.width  = W + 'px';
     C.style.height = H + 'px';
     if (DPR !== 1) ctx.scale(DPR, DPR);
+    updateDeviceDetection();
 }
 addEventListener('resize', resize);
 resize();
