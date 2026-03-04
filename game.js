@@ -1682,17 +1682,19 @@ function initBgStars() {
 initBgStars();
 
 function drawBgStars() {
-    // Nebulae
-    for (const n of nebulae) {
-        const x = ((n.x * W * 4 - cam.x * n.speed) % W + W) % W;
-        const y = ((n.y * H * 4 - cam.y * n.speed) % H + H) % H;
-        const breathe = 1 + Math.sin(frame * 0.005 + n.phase) * 0.15;
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, n.r * breathe);
-        grad.addColorStop(0,   n.col + (n.a * 1.5) + ')');
-        grad.addColorStop(0.5, n.col + (n.a * 0.5) + ')');
-        grad.addColorStop(1,   n.col + '0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(x - n.r * breathe, y - n.r * breathe, n.r * 2 * breathe, n.r * 2 * breathe);
+    // Nebulae (skip on mobile — gradient-heavy)
+    if (!isMobile) {
+        for (const n of nebulae) {
+            const x = ((n.x * W * 4 - cam.x * n.speed) % W + W) % W;
+            const y = ((n.y * H * 4 - cam.y * n.speed) % H + H) % H;
+            const breathe = 1 + Math.sin(frame * 0.005 + n.phase) * 0.15;
+            const grad = ctx.createRadialGradient(x, y, 0, x, y, n.r * breathe);
+            grad.addColorStop(0,   n.col + (n.a * 1.5) + ')');
+            grad.addColorStop(0.5, n.col + (n.a * 0.5) + ')');
+            grad.addColorStop(1,   n.col + '0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - n.r * breathe, y - n.r * breathe, n.r * 2 * breathe, n.r * 2 * breathe);
+        }
     }
 
     // Stars
@@ -1723,21 +1725,37 @@ function drawBgStars() {
     }
     ctx.globalAlpha = 1;
 
-    // Floating dust
-    for (const d of ambientParts) {
-        const x = ((d.x * W * 3 - cam.x * d.spd) % W + W) % W;
-        const y = ((d.y * H * 3 - cam.y * d.spd) % H + H) % H;
-        d.phase += 0.015;
-        const a = d.a + Math.sin(d.phase) * 0.1;
-        ctx.fillStyle = `rgba(167,139,250,${clamp(a, 0, 0.4)})`;
-        ctx.beginPath();
-        ctx.arc(x, y, d.r, 0, TAU);
-        ctx.fill();
+    // Floating dust (skip on mobile)
+    if (!isMobile) {
+        for (const d of ambientParts) {
+            const x = ((d.x * W * 3 - cam.x * d.spd) % W + W) % W;
+            const y = ((d.y * H * 3 - cam.y * d.spd) % H + H) % H;
+            d.phase += 0.015;
+            const a = d.a + Math.sin(d.phase) * 0.1;
+            ctx.fillStyle = `rgba(167,139,250,${clamp(a, 0, 0.4)})`;
+            ctx.beginPath();
+            ctx.arc(x, y, d.r, 0, TAU);
+            ctx.fill();
+        }
     }
 }
 
 // ─── Grid ───────────────────────────────────────────────────
 function drawGrid() {
+    // On mobile, only draw major grid lines (much fewer draw calls)
+    if (isMobile) {
+        const MAJ = 200;
+        const mx = ((-cam.x % MAJ) + MAJ) % MAJ;
+        const my = ((-cam.y % MAJ) + MAJ) % MAJ;
+        ctx.strokeStyle = 'rgba(34,211,238,0.05)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        for (let x = mx; x < W; x += MAJ) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+        for (let y = my; y < H; y += MAJ) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+        ctx.stroke();
+        return;
+    }
+
     const GRID = 50;
     const sx = ((-cam.x % GRID) + GRID) % GRID;
     const sy = ((-cam.y % GRID) + GRID) % GRID;
@@ -1759,15 +1777,13 @@ function drawGrid() {
     for (let y = my; y < H; y += MAJ) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
     ctx.stroke();
 
-    // Grid glow near player (skip on mobile)
-    if (!isMobile) {
+    // Grid glow near player
     const px = P.x - cam.x, py = P.y - cam.y;
     const grad = ctx.createRadialGradient(px, py, 0, px, py, 160);
     grad.addColorStop(0, 'rgba(34,211,238,0.06)');
     grad.addColorStop(1, 'rgba(34,211,238,0)');
     ctx.fillStyle = grad;
     ctx.fillRect(px - 160, py - 160, 320, 320);
-    }
 }
 
 // ─── Player ─────────────────────────────────────────────────
@@ -1779,8 +1795,29 @@ function drawPlayer() {
     const angle = Math.atan2(P.vy, P.vx);
     const skin = SKINS[selectedSkin];
 
-    // Engine trail (skip on mobile)
-    if (!isMobile && speed > 0.5) {
+    if (isMobile) {
+        // ── MOBILE: ultra-minimal player (no trail, no ring, no aura, no gradients) ──
+        ctx.save();
+        ctx.fillStyle = skin.body;
+        ctx.beginPath(); ctx.arc(sx, sy, P.r, 0, TAU); ctx.fill();
+        // Small highlight
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(sx - 2, sy - 2, P.r * 0.35, 0, TAU); ctx.fill();
+        ctx.restore();
+        // Eyes
+        ctx.fillStyle = '#060612';
+        for (let s = -1; s <= 1; s += 2) {
+            const ex = sx + Math.cos(angle + s * 0.4) * 6;
+            const ey = sy + Math.sin(angle + s * 0.4) * 6;
+            ctx.beginPath(); ctx.arc(ex, ey, 2.5, 0, TAU); ctx.fill();
+        }
+        return;
+    }
+
+    // ── DESKTOP: full visual fidelity ──
+    // Engine trail
+    if (speed > 0.5) {
         ctx.save();
         const trailLen = speed * 6;
         const tx = sx - Math.cos(angle) * trailLen;
@@ -1802,12 +1839,12 @@ function drawPlayer() {
     const ringR = P.r + 8 + Math.sin(frame * 0.12) * 3;
     ctx.strokeStyle = skin.glow;
     ctx.lineWidth = 1.5;
-    if (!isMobile) { ctx.shadowColor = skin.glow; ctx.shadowBlur = 15; }
+    ctx.shadowColor = skin.glow; ctx.shadowBlur = 15;
     ctx.beginPath(); ctx.arc(sx, sy, ringR, 0, TAU); ctx.stroke();
     ctx.restore();
 
-    // Speed aura (skip on mobile for perf)
-    if (!isMobile && speed > 1) {
+    // Speed aura
+    if (speed > 1) {
         ctx.save();
         const aGrad = ctx.createRadialGradient(sx, sy, P.r, sx, sy, P.r + 18);
         aGrad.addColorStop(0, hexRgba(skin.body, 0.15));
@@ -1819,15 +1856,7 @@ function drawPlayer() {
 
     // Body
     ctx.save();
-    if (!isMobile) { ctx.shadowColor = skin.glow; ctx.shadowBlur = 30; }
-    if (isMobile) {
-        // Simple flat fill on mobile — no gradients
-        ctx.fillStyle = skin.body;
-        ctx.beginPath(); ctx.arc(sx, sy, P.r, 0, TAU); ctx.fill();
-        ctx.globalAlpha = 0.4;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(sx - 2, sy - 2, P.r * 0.4, 0, TAU); ctx.fill();
-    } else {
+    ctx.shadowColor = skin.glow; ctx.shadowBlur = 30;
     const bGrad = ctx.createRadialGradient(sx - 3, sy - 3, 0, sx, sy, P.r);
     bGrad.addColorStop(0,   '#fff');
     bGrad.addColorStop(0.3, skin.light);
@@ -1842,7 +1871,6 @@ function drawPlayer() {
     hGrad.addColorStop(1, 'transparent');
     ctx.fillStyle = hGrad;
     ctx.beginPath(); ctx.arc(sx, sy, P.r * 0.7, 0, TAU); ctx.fill();
-    }
     ctx.restore();
 
     // Eyes
@@ -1869,15 +1897,17 @@ function drawOrbiters() {
         const rad = def.rad[lv];
         const px  = P.x - cam.x, py = P.y - cam.y;
 
-        // Orbit path
-        ctx.save();
-        ctx.globalAlpha = 0.06;
-        ctx.strokeStyle = def.col;
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 6]);
-        ctx.beginPath(); ctx.arc(px, py, rad, 0, TAU); ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
+        // Orbit path (skip on mobile)
+        if (!isMobile) {
+            ctx.save();
+            ctx.globalAlpha = 0.06;
+            ctx.strokeStyle = def.col;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 6]);
+            ctx.beginPath(); ctx.arc(px, py, rad, 0, TAU); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
 
         for (let i = 0; i < cnt; i++) {
             const a  = w.angle + (TAU / cnt) * i;
@@ -1886,16 +1916,16 @@ function drawOrbiters() {
 
             // Motion trail (skip on mobile)
             if (!isMobile) {
-            ctx.save();
-            ctx.globalAlpha = 0.15;
-            const prevA = a - def.spd[lv] * 5;
-            const pbx = P.x + Math.cos(prevA) * rad - cam.x;
-            const pby = P.y + Math.sin(prevA) * rad - cam.y;
-            ctx.strokeStyle = def.col;
-            ctx.lineWidth = 6;
-            ctx.lineCap = 'round';
-            ctx.beginPath(); ctx.moveTo(pbx, pby); ctx.lineTo(bx, by); ctx.stroke();
-            ctx.restore();
+                ctx.save();
+                ctx.globalAlpha = 0.15;
+                const prevA = a - def.spd[lv] * 5;
+                const pbx = P.x + Math.cos(prevA) * rad - cam.x;
+                const pby = P.y + Math.sin(prevA) * rad - cam.y;
+                ctx.strokeStyle = def.col;
+                ctx.lineWidth = 6;
+                ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(pbx, pby); ctx.lineTo(bx, by); ctx.stroke();
+                ctx.restore();
             }
 
             // Diamond blade
@@ -1908,9 +1938,11 @@ function drawOrbiters() {
             ctx.moveTo(0, -12); ctx.lineTo(6, 0); ctx.lineTo(0, 12); ctx.lineTo(-6, 0);
             ctx.closePath();
             ctx.fill();
-            ctx.globalAlpha = 0.6;
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(0, 0, 3, 0, TAU); ctx.fill();
+            if (!isMobile) {
+                ctx.globalAlpha = 0.6;
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(0, 0, 3, 0, TAU); ctx.fill();
+            }
             ctx.restore();
         }
     }
@@ -2046,14 +2078,14 @@ function drawProjectiles() {
         ctx.rotate(a);
 
         if (p.type === 'missile') {
-            // Engine glow (skip gradient on mobile)
+            // Engine glow (skip on mobile)
             if (!isMobile) {
-            ctx.globalAlpha = 0.25;
-            const eGrad = ctx.createRadialGradient(-6, 0, 0, -6, 0, 10);
-            eGrad.addColorStop(0, p.col);
-            eGrad.addColorStop(1, 'transparent');
-            ctx.fillStyle = eGrad;
-            ctx.beginPath(); ctx.arc(-6, 0, 10, 0, TAU); ctx.fill();
+                ctx.globalAlpha = 0.25;
+                const eGrad = ctx.createRadialGradient(-6, 0, 0, -6, 0, 10);
+                eGrad.addColorStop(0, p.col);
+                eGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = eGrad;
+                ctx.beginPath(); ctx.arc(-6, 0, 10, 0, TAU); ctx.fill();
             }
 
             ctx.globalAlpha = 1;
@@ -2063,16 +2095,22 @@ function drawProjectiles() {
             ctx.closePath();
             ctx.fill();
 
-            ctx.fillStyle = '#fff';
-            ctx.globalAlpha = 0.6;
-            ctx.beginPath(); ctx.arc(4, 0, 2, 0, TAU); ctx.fill();
+            if (!isMobile) {
+                ctx.fillStyle = '#fff';
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath(); ctx.arc(4, 0, 2, 0, TAU); ctx.fill();
+            }
         } else {
-            // Bolt
-            ctx.scale(isMobile ? 1.2 : 1.5, 1);
-            ctx.beginPath(); ctx.arc(0, 0, p.r, 0, TAU); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.globalAlpha = 0.5;
-            ctx.beginPath(); ctx.arc(0, 0, p.r * 0.4, 0, TAU); ctx.fill();
+            // Bolt — simpler on mobile
+            if (isMobile) {
+                ctx.beginPath(); ctx.arc(0, 0, p.r, 0, TAU); ctx.fill();
+            } else {
+                ctx.scale(1.5, 1);
+                ctx.beginPath(); ctx.arc(0, 0, p.r, 0, TAU); ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath(); ctx.arc(0, 0, p.r * 0.4, 0, TAU); ctx.fill();
+            }
         }
         ctx.restore();
     }
@@ -2272,42 +2310,59 @@ function drawLightning() {
         const alpha = l.life / 15;
         ctx.save();
 
-        // Glow layer
-        ctx.globalAlpha = alpha * 0.3;
-        ctx.strokeStyle = l.col;
-        if (!isMobile) { ctx.shadowColor = l.col; ctx.shadowBlur = 25; }
-        ctx.lineWidth = isMobile ? 4 : 8;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        for (let i = 0; i < l.points.length; i++) {
-            const sx = l.points[i].x - cam.x, sy = l.points[i].y - cam.y;
-            if (i === 0) { ctx.moveTo(sx, sy); continue; }
-            const px = l.points[i - 1].x - cam.x, py = l.points[i - 1].y - cam.y;
-            ctx.lineTo((px + sx) / 2 + rand(-15, 15), (py + sy) / 2 + rand(-15, 15));
-            ctx.lineTo(sx, sy);
-        }
-        ctx.stroke();
+        if (isMobile) {
+            // ── MOBILE: single thin core line only, no glow, no impact circles ──
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = l.col;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            for (let i = 0; i < l.points.length; i++) {
+                const sx = l.points[i].x - cam.x, sy = l.points[i].y - cam.y;
+                if (i === 0) { ctx.moveTo(sx, sy); continue; }
+                ctx.lineTo(sx, sy);
+            }
+            ctx.stroke();
+        } else {
+            // ── DESKTOP: glow layer + core layer + impact circles ──
+            // Glow layer
+            ctx.globalAlpha = alpha * 0.3;
+            ctx.strokeStyle = l.col;
+            ctx.shadowColor = l.col; ctx.shadowBlur = 25;
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            for (let i = 0; i < l.points.length; i++) {
+                const sx = l.points[i].x - cam.x, sy = l.points[i].y - cam.y;
+                if (i === 0) { ctx.moveTo(sx, sy); continue; }
+                const px = l.points[i - 1].x - cam.x, py = l.points[i - 1].y - cam.y;
+                ctx.lineTo((px + sx) / 2 + rand(-15, 15), (py + sy) / 2 + rand(-15, 15));
+                ctx.lineTo(sx, sy);
+            }
+            ctx.stroke();
 
-        // Core layer
-        ctx.globalAlpha = alpha;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let i = 0; i < l.points.length; i++) {
-            const sx = l.points[i].x - cam.x, sy = l.points[i].y - cam.y;
-            if (i === 0) { ctx.moveTo(sx, sy); continue; }
-            const px = l.points[i - 1].x - cam.x, py = l.points[i - 1].y - cam.y;
-            ctx.lineTo((px + sx) / 2 + rand(-10, 10), (py + sy) / 2 + rand(-10, 10));
-            ctx.lineTo(sx, sy);
-        }
-        ctx.stroke();
+            // Core layer
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = '#fff';
+            ctx.shadowBlur = 0;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < l.points.length; i++) {
+                const sx = l.points[i].x - cam.x, sy = l.points[i].y - cam.y;
+                if (i === 0) { ctx.moveTo(sx, sy); continue; }
+                const px = l.points[i - 1].x - cam.x, py = l.points[i - 1].y - cam.y;
+                ctx.lineTo((px + sx) / 2 + rand(-10, 10), (py + sy) / 2 + rand(-10, 10));
+                ctx.lineTo(sx, sy);
+            }
+            ctx.stroke();
 
-        // Impact circles
-        ctx.globalAlpha = alpha * 0.4;
-        ctx.fillStyle = l.col;
-        for (let i = 1; i < l.points.length; i++) {
-            const sx = l.points[i].x - cam.x, sy = l.points[i].y - cam.y;
-            ctx.beginPath(); ctx.arc(sx, sy, 8 * alpha, 0, TAU); ctx.fill();
+            // Impact circles
+            ctx.globalAlpha = alpha * 0.4;
+            ctx.fillStyle = l.col;
+            for (let i = 1; i < l.points.length; i++) {
+                const sx = l.points[i].x - cam.x, sy = l.points[i].y - cam.y;
+                ctx.beginPath(); ctx.arc(sx, sy, 8 * alpha, 0, TAU); ctx.fill();
+            }
         }
         ctx.restore();
     }
@@ -2319,22 +2374,32 @@ function drawNovas() {
         const sx = n.x - cam.x, sy = n.y - cam.y;
 
         ctx.save();
-        ctx.globalAlpha = alpha * 0.12;
-        const nGrad = ctx.createRadialGradient(sx, sy, n.r * 0.7, sx, sy, n.r);
-        nGrad.addColorStop(0, 'transparent');
-        nGrad.addColorStop(1, n.col);
-        ctx.fillStyle = nGrad;
-        ctx.beginPath(); ctx.arc(sx, sy, n.r, 0, TAU); ctx.fill();
 
-        ctx.globalAlpha = alpha;
-        ctx.strokeStyle = n.col;
-        if (!isMobile) { ctx.shadowColor = n.col; ctx.shadowBlur = 25; }
-        ctx.lineWidth = 4 * alpha + 1;
-        ctx.beginPath(); ctx.arc(sx, sy, n.r, 0, TAU); ctx.stroke();
+        if (isMobile) {
+            // ── MOBILE: single expanding ring, no gradient fill ──
+            ctx.globalAlpha = alpha * 0.8;
+            ctx.strokeStyle = n.col;
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(sx, sy, n.r, 0, TAU); ctx.stroke();
+        } else {
+            // ── DESKTOP: gradient fill + double ring ──
+            ctx.globalAlpha = alpha * 0.12;
+            const nGrad = ctx.createRadialGradient(sx, sy, n.r * 0.7, sx, sy, n.r);
+            nGrad.addColorStop(0, 'transparent');
+            nGrad.addColorStop(1, n.col);
+            ctx.fillStyle = nGrad;
+            ctx.beginPath(); ctx.arc(sx, sy, n.r, 0, TAU); ctx.fill();
 
-        ctx.globalAlpha = alpha * 0.6;
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(sx, sy, n.r * 0.7, 0, TAU); ctx.stroke();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = n.col;
+            ctx.shadowColor = n.col; ctx.shadowBlur = 25;
+            ctx.lineWidth = 4 * alpha + 1;
+            ctx.beginPath(); ctx.arc(sx, sy, n.r, 0, TAU); ctx.stroke();
+
+            ctx.globalAlpha = alpha * 0.6;
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(sx, sy, n.r * 0.7, 0, TAU); ctx.stroke();
+        }
         ctx.restore();
     }
 }
@@ -2430,10 +2495,10 @@ function render() {
 
     drawJoystick();
 
-    // Damage flash overlay
+    // Damage flash overlay (reduced on mobile)
     if (flashAlpha > 0) {
         ctx.save();
-        ctx.globalAlpha = flashAlpha;
+        ctx.globalAlpha = isMobile ? flashAlpha * 0.5 : flashAlpha;
         const flashCol = P.hp >= P.maxHp * 0.95 && flashAlpha < 0.2
             ? '#34d399' : (P.hp > 0 ? '#fbbf24' : '#ef4444');
         ctx.fillStyle = flashCol;
@@ -2441,8 +2506,8 @@ function render() {
         ctx.restore();
     }
 
-    // Low-HP vignette
-    if (P.hp > 0) {
+    // Low-HP vignette (skip on mobile — radialGradient fill each frame is heavy)
+    if (!isMobile && P.hp > 0) {
         const hpRatio = clamp(P.hp / P.maxHp, 0, 1);
         if (hpRatio < 0.4) {
             ctx.save();
