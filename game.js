@@ -1624,11 +1624,11 @@ function updateHUD() {
     // Best score sub-label
     $bestScore.textContent = 'BEST: ' + best.toLocaleString();
 
-    // Timer & kills (emoji on kill-count handled by CSS ::before)
+    // Timer & kills
     const min = Math.floor(gt / 60);
     const sec = Math.floor(gt % 60);
     $timer.textContent = min + ':' + String(sec).padStart(2, '0');
-    $kills.textContent = kills;
+    $kills.textContent = '☠ ' + kills;
 
     // Threat bar (fills over first 10 minutes of play)
     const threatPct = Math.min(100, (gt / 600) * 100);
@@ -1685,14 +1685,14 @@ function updateHUD() {
     let html = '';
     for (const w of weapons) {
         const def = WDEFS[w.type];
-        html += `<div class="weapon-icon" style="border-color:${def.col};box-shadow:0 0 8px ${def.col}33"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="34" height="34"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
+        html += `<div class="weapon-icon" style="border-color:${def.col}"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="32" height="32"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
     }
     $wIcons.innerHTML = html;
     // Draw icons on mini canvases
     $wIcons.querySelectorAll('.wicon-cvs').forEach(cvs => {
         const mCtx = cvs.getContext('2d');
         const t = cvs.dataset.type, c = cvs.dataset.col;
-        drawIconOnMini(mCtx, t, 17, 17, 12, c);
+        drawIconOnMini(mCtx, t, 16, 16, 10, c);
     });
 }
 
