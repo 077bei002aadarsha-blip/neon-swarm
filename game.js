@@ -708,6 +708,7 @@ function startGame() {
     $gameoverScreen.style.display = 'none';
     $pauseScreen.style.display = 'none';
     $hud.style.display = '';
+    $wIcons.style.display = '';
     $bestScore.textContent = 'BEST: ' + best.toLocaleString();
 
     // In-game onboarding: show controls briefly
@@ -760,6 +761,7 @@ $('quit-btn').onclick   = () => {
     state = 'menu';
     $pauseScreen.style.display = 'none';
     $hud.style.display = 'none';
+    $wIcons.style.display = 'none';
     $startScreen.style.display = '';
 };
 
@@ -1233,6 +1235,7 @@ function die() {
 
     setTimeout(() => {
         $hud.style.display = 'none';
+        $wIcons.style.display = 'none';
         $gameoverScreen.style.display = '';
         const min = Math.floor(gt / 60);
         const sec = Math.floor(gt % 60);
