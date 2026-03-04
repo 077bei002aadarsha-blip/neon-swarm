@@ -156,6 +156,10 @@ const DPR = isMobile ? Math.min(devicePixelRatio, 1) : 1;
 function resize() {
     W = innerWidth;
     H = innerHeight;
+    // On mobile, ensure we don't exceed viewport
+    if (isMobile && window.visualViewport) {
+        H = Math.min(H, window.visualViewport.height);
+    }
     C.width  = W * DPR;
     C.height = H * DPR;
     C.style.width  = W + 'px';
@@ -1970,26 +1974,15 @@ function drawOrbiters() {
 // ─── Enemies ────────────────────────────────────────────────
 function drawEnemies() {
     for (const e of enemies) {
+        if (!e.alive) continue;
         const sx = e.x - cam.x, sy = e.y - cam.y;
         if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) continue;
 
         ctx.save();
         let r = e.r;
 
-        if (isMobile) {
-            // MOBILE: Ultra-simple filled circle only
-            ctx.fillStyle = e.hit > 0 ? '#fff' : e.col;
-            ctx.beginPath();
-            ctx.arc(sx, sy, r, 0, TAU);
-            ctx.fill();
-            ctx.restore();
-            continue; // Skip all desktop rendering below
-        }
-
-        // DESKTOP: Full rendering with shapes, eyes, glows
-
-        // Threat aura
-        if (e.type === 'boss' || e.type === 'brute') {
+        // Threat aura (skip on mobile)
+        if (!isMobile && (e.type === 'boss' || e.type === 'brute')) {
             ctx.globalAlpha = 0.12;
             ctx.strokeStyle = e.col;
             ctx.lineWidth = 2;
@@ -1999,8 +1992,7 @@ function drawEnemies() {
 
         // Boss glow
         if (e.type === 'boss') {
-            ctx.shadowColor = e.hit > 0 ? '#fff' : e.col; 
-            ctx.shadowBlur = e.hit > 0 ? 18 : 8;
+            if (!isMobile) { ctx.shadowColor = e.hit > 0 ? '#fff' : e.col; ctx.shadowBlur = e.hit > 0 ? 18 : 8; }
             r += Math.sin(frame * 0.05) * 3;
         }
 
