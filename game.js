@@ -36,24 +36,16 @@ let isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
               || ('ontouchstart' in window && innerWidth < 1400)
               || (navigator.maxTouchPoints > 1 && innerWidth < 1400);
 
-// Force mobile for iPhone/iPad regardless of other checks
-if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    isMobile = true;
-}
-
 // Upgrade detection once CrazyGames SDK is ready
 function updateDeviceDetection() {
     if (cgSDK) {
         try {
             const info = cgSDK.system.info;
             if (info && info.device) {
-                const sdkMobile = info.device.type === 'mobile' || info.device.type === 'tablet';
-                isMobile = sdkMobile || isMobile; // Keep true if either detection says mobile
-                console.log('[Mobile Detection] SDK type:', info.device.type, '| isMobile:', isMobile);
+                isMobile = info.device.type === 'mobile' || info.device.type === 'tablet';
             }
         } catch (_) {}
     }
-    console.log('[Mobile Detection] Final isMobile:', isMobile, '| UA:', navigator.userAgent.substring(0, 50));
 }
 
 // ─── SKIN COLORS ─────────────────────────────────────────────
@@ -156,15 +148,10 @@ const DPR = isMobile ? Math.min(devicePixelRatio, 1) : 1;
 function resize() {
     W = innerWidth;
     H = innerHeight;
-    // On mobile, ensure we don't exceed viewport
-    if (isMobile && window.visualViewport) {
-        H = Math.min(H, window.visualViewport.height);
-    }
     C.width  = W * DPR;
     C.height = H * DPR;
     C.style.width  = W + 'px';
     C.style.height = H + 'px';
-    ctx.imageSmoothingEnabled = !isMobile;
     if (DPR !== 1) ctx.scale(DPR, DPR);
 }
 addEventListener('resize', resize);
@@ -177,14 +164,6 @@ const randInt = (a, b) => Math.floor(rand(a, b + 1));
 const dist  = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const lerp  = (a, b, t) => a + (b - a) * t;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-function resetCtxState() {
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
-    ctx.filter = 'none';
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.setLineDash([]);
-}
 function hexRgba(hex, a) {
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
     return `rgba(${r},${g},${b},${a})`;
@@ -729,7 +708,6 @@ function startGame() {
     $gameoverScreen.style.display = 'none';
     $pauseScreen.style.display = 'none';
     $hud.style.display = '';
-    $wIcons.style.display = '';
     $bestScore.textContent = 'BEST: ' + best.toLocaleString();
 
     // In-game onboarding: show controls briefly
@@ -782,7 +760,6 @@ $('quit-btn').onclick   = () => {
     state = 'menu';
     $pauseScreen.style.display = 'none';
     $hud.style.display = 'none';
-    $wIcons.style.display = 'none';
     $startScreen.style.display = '';
 };
 
@@ -1256,7 +1233,6 @@ function die() {
 
     setTimeout(() => {
         $hud.style.display = 'none';
-        $wIcons.style.display = 'none';
         $gameoverScreen.style.display = '';
         const min = Math.floor(gt / 60);
         const sec = Math.floor(gt % 60);
@@ -1622,8 +1598,7 @@ function updateHUD() {
     let html = '';
     for (const w of weapons) {
         const def = WDEFS[w.type];
-        const glowStyle = isMobile ? '' : `box-shadow:0 0 10px ${def.col}33`;
-        html += `<div class="weapon-icon" style="border-color:${def.col};${glowStyle}"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="28" height="28"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
+        html += `<div class="weapon-icon" style="border-color:${def.col};box-shadow:0 0 10px ${def.col}33"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="28" height="28"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
     }
     $wIcons.innerHTML = html;
     // Draw icons on mini canvases
@@ -1730,32 +1705,25 @@ function drawBgStars() {
         const alpha = s.a + Math.sin(s.twinkle) * 0.15;
         if (alpha < 0.05) continue;
 
-        if (isMobile) {
-            // Mobile: solid fill, no alpha blending
-            ctx.fillStyle = s.col;
-            ctx.fillRect(x - s.r, y - s.r, s.r * 2, s.r * 2);
-        } else {
-            // Desktop: full effect
-            ctx.globalAlpha = clamp(alpha, 0, 1);
-            ctx.fillStyle = s.col;
-            ctx.beginPath();
-            ctx.arc(x, y, s.r, 0, TAU);
-            ctx.fill();
+        ctx.globalAlpha = clamp(alpha, 0, 1);
+        ctx.fillStyle = s.col;
+        ctx.beginPath();
+        ctx.arc(x, y, s.r, 0, TAU);
+        ctx.fill();
 
-            // Cross flare on bright stars
-            if (s.r > 1.5) {
-                ctx.globalAlpha = alpha * 0.3;
-                ctx.strokeStyle = s.col;
-                ctx.lineWidth = 0.5;
-                const cr = s.r * 4;
-                ctx.beginPath();
-                ctx.moveTo(x - cr, y); ctx.lineTo(x + cr, y);
-                ctx.moveTo(x, y - cr); ctx.lineTo(x, y + cr);
-                ctx.stroke();
-            }
-            ctx.globalAlpha = 1;
+        // Cross flare on bright stars (skip on mobile)
+        if (!isMobile && s.r > 1.5) {
+            ctx.globalAlpha = alpha * 0.3;
+            ctx.strokeStyle = s.col;
+            ctx.lineWidth = 0.5;
+            const cr = s.r * 4;
+            ctx.beginPath();
+            ctx.moveTo(x - cr, y); ctx.lineTo(x + cr, y);
+            ctx.moveTo(x, y - cr); ctx.lineTo(x, y + cr);
+            ctx.stroke();
         }
     }
+    ctx.globalAlpha = 1;
 
     // Floating dust (skip on mobile)
     if (!isMobile) {
@@ -1828,13 +1796,14 @@ function drawPlayer() {
     const skin = SKINS[selectedSkin];
 
     if (isMobile) {
-        // ── MOBILE: ultra-minimal player (no trail, no ring, no aura, no gradients, no alpha) ──
+        // ── MOBILE: ultra-minimal player (no trail, no ring, no aura, no gradients) ──
         ctx.save();
         ctx.fillStyle = skin.body;
         ctx.beginPath(); ctx.arc(sx, sy, P.r, 0, TAU); ctx.fill();
-        // Very small white dot for definition (solid, no alpha)
+        // Small highlight
+        ctx.globalAlpha = 0.4;
         ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(sx - 2, sy - 2, 2, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx - 2, sy - 2, P.r * 0.35, 0, TAU); ctx.fill();
         ctx.restore();
         // Eyes
         ctx.fillStyle = '#060612';
@@ -1864,20 +1833,18 @@ function drawPlayer() {
         ctx.restore();
     }
 
-    // Energy ring (desktop only)
-    if (!isMobile) {
-        ctx.save();
-        ctx.globalAlpha = 0.12 + Math.sin(frame * 0.08) * 0.05;
-        const ringR = P.r + 8 + Math.sin(frame * 0.12) * 3;
-        ctx.strokeStyle = skin.glow;
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = skin.glow; ctx.shadowBlur = 15;
-        ctx.beginPath(); ctx.arc(sx, sy, ringR, 0, TAU); ctx.stroke();
-        ctx.restore();
-    }
+    // Energy ring
+    ctx.save();
+    ctx.globalAlpha = 0.12 + Math.sin(frame * 0.08) * 0.05;
+    const ringR = P.r + 8 + Math.sin(frame * 0.12) * 3;
+    ctx.strokeStyle = skin.glow;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = skin.glow; ctx.shadowBlur = 15;
+    ctx.beginPath(); ctx.arc(sx, sy, ringR, 0, TAU); ctx.stroke();
+    ctx.restore();
 
-    // Speed aura (desktop only)
-    if (!isMobile && speed > 1) {
+    // Speed aura
+    if (speed > 1) {
         ctx.save();
         const aGrad = ctx.createRadialGradient(sx, sy, P.r, sx, sy, P.r + 18);
         aGrad.addColorStop(0, hexRgba(skin.body, 0.15));
@@ -1889,7 +1856,7 @@ function drawPlayer() {
 
     // Body
     ctx.save();
-    if (!isMobile) { ctx.shadowColor = skin.glow; ctx.shadowBlur = 30; }
+    ctx.shadowColor = skin.glow; ctx.shadowBlur = 30;
     const bGrad = ctx.createRadialGradient(sx - 3, sy - 3, 0, sx, sy, P.r);
     bGrad.addColorStop(0,   '#fff');
     bGrad.addColorStop(0.3, skin.light);
@@ -1898,14 +1865,12 @@ function drawPlayer() {
     ctx.fillStyle = bGrad;
     ctx.beginPath(); ctx.arc(sx, sy, P.r, 0, TAU); ctx.fill();
 
-    if (!isMobile) {
-        ctx.globalAlpha = 0.35;
-        const hGrad = ctx.createRadialGradient(sx - 3, sy - 4, 1, sx, sy, P.r * 0.7);
-        hGrad.addColorStop(0, '#fff');
-        hGrad.addColorStop(1, 'transparent');
-        ctx.fillStyle = hGrad;
-        ctx.beginPath(); ctx.arc(sx, sy, P.r * 0.7, 0, TAU); ctx.fill();
-    }
+    ctx.globalAlpha = 0.35;
+    const hGrad = ctx.createRadialGradient(sx - 3, sy - 4, 1, sx, sy, P.r * 0.7);
+    hGrad.addColorStop(0, '#fff');
+    hGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = hGrad;
+    ctx.beginPath(); ctx.arc(sx, sy, P.r * 0.7, 0, TAU); ctx.fill();
     ctx.restore();
 
     // Eyes
@@ -1914,13 +1879,11 @@ function drawPlayer() {
         const ex = sx + Math.cos(angle + s * 0.4) * 6;
         const ey = sy + Math.sin(angle + s * 0.4) * 6;
         ctx.beginPath(); ctx.arc(ex, ey, 2.5, 0, TAU); ctx.fill();
-        if (!isMobile) {
-            ctx.fillStyle = '#fff';
-            ctx.globalAlpha = 0.5;
-            ctx.beginPath(); ctx.arc(ex + 0.8, ey - 0.8, 1, 0, TAU); ctx.fill();
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = '#060612';
-        }
+        ctx.fillStyle = '#fff';
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath(); ctx.arc(ex + 0.8, ey - 0.8, 1, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#060612';
     }
 }
 
@@ -1988,7 +1951,6 @@ function drawOrbiters() {
 // ─── Enemies ────────────────────────────────────────────────
 function drawEnemies() {
     for (const e of enemies) {
-        if (!e.alive) continue;
         const sx = e.x - cam.x, sy = e.y - cam.y;
         if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) continue;
 
@@ -2054,13 +2016,11 @@ function drawEnemies() {
         }
         ctx.fill();
 
-        // Highlight dot (skip on mobile)
-        if (!isMobile) {
-            ctx.globalAlpha = 0.22;
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(sx - r * 0.2, sy - r * 0.2, r * 0.3, 0, TAU); ctx.fill();
-            ctx.globalAlpha = 1;
-        }
+        // Highlight dot
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(sx - r * 0.2, sy - r * 0.2, r * 0.3, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 1;
 
         // Eyes (walker & sprinter)
         if (e.type === 'walker' || e.type === 'sprinter') {
@@ -2079,18 +2039,16 @@ function drawEnemies() {
             }
         }
 
-        // Boss HP bar (skip decorative rings on mobile)
+        // Boss HP bar
         if (e.type === 'boss') {
-            if (!isMobile) {
-                ctx.save();
-                ctx.globalAlpha = 0.25;
-                ctx.strokeStyle = e.col;
-                ctx.lineWidth = 2;
-                const ba = frame * 0.02;
-                ctx.beginPath(); ctx.arc(sx, sy, r + 10, ba, ba + PI * 1.2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(sx, sy, r + 10, ba + PI, ba + PI * 2.2); ctx.stroke();
-                ctx.restore();
-            }
+            ctx.save();
+            ctx.globalAlpha = 0.25;
+            ctx.strokeStyle = e.col;
+            ctx.lineWidth = 2;
+            const ba = frame * 0.02;
+            ctx.beginPath(); ctx.arc(sx, sy, r + 10, ba, ba + PI * 1.2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(sx, sy, r + 10, ba + PI, ba + PI * 2.2); ctx.stroke();
+            ctx.restore();
 
             const bw = 70, bh = 7;
             ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -2178,16 +2136,13 @@ function drawGems() {
         ctx.closePath();
         ctx.fill();
 
-        // Highlight (skip alpha blend on mobile)
-        if (!isMobile) {
-            ctx.globalAlpha = 0.5;
-            ctx.fillStyle = '#a7f3d0';
-            ctx.beginPath();
-            ctx.moveTo(0, -r * 0.6); ctx.lineTo(r * 0.35, 0);
-            ctx.lineTo(0, r * 0.6);  ctx.lineTo(-r * 0.35, 0);
-            ctx.closePath();
-            ctx.fill();
-        }
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#a7f3d0';
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.6); ctx.lineTo(r * 0.35, 0);
+        ctx.lineTo(0, r * 0.6);  ctx.lineTo(-r * 0.35, 0);
+        ctx.closePath();
+        ctx.fill();
 
         ctx.restore();
     }
@@ -2228,13 +2183,11 @@ function drawHealthOrbs() {
         ctx.fillRect(sx - ch / 2, sy - cw / 2, ch, cw);
 
         // Heal amount
-        if (!isMobile) {
-            ctx.globalAlpha = 0.6 + Math.sin(h.pulse * 1.5) * 0.3;
-            ctx.font = "bold 10px 'Orbitron', sans-serif";
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#fca5a5';
-            ctx.fillText('+' + h.heal, sx, sy - r - 6);
-        }
+        ctx.globalAlpha = 0.6 + Math.sin(h.pulse * 1.5) * 0.3;
+        ctx.font = "bold 10px 'Orbitron', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fca5a5';
+        ctx.fillText('+' + h.heal, sx, sy - r - 6);
 
         ctx.restore();
     }
@@ -2253,13 +2206,11 @@ function drawPowerUps() {
 
         ctx.save();
 
-        // Ground ring (skip on mobile)
-        if (!isMobile) {
-            ctx.globalAlpha = 0.15 + Math.sin(pu.pulse) * 0.05;
-            ctx.strokeStyle = pu.col;
-            ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.ellipse(sx, pu.y - cam.y + 12, r * 1.8, r * 0.6, 0, 0, TAU); ctx.stroke();
-        }
+        // Ground ring
+        ctx.globalAlpha = 0.15 + Math.sin(pu.pulse) * 0.05;
+        ctx.strokeStyle = pu.col;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(sx, pu.y - cam.y + 12, r * 1.8, r * 0.6, 0, 0, TAU); ctx.stroke();
 
         // Ground glow (skip on mobile)
         if (!isMobile) {
@@ -2283,13 +2234,11 @@ function drawPowerUps() {
         ctx.fillStyle = pu.col;
         ctx.beginPath(); ctx.arc(sx, sy, r, 0, TAU); ctx.fill();
 
-        // Core highlight (skip on mobile)
-        if (!isMobile) {
-            ctx.globalAlpha = 0.6;
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(sx - 2, sy - 2, r * 0.4, 0, TAU); ctx.fill();
-            ctx.globalAlpha = 1;
-        }
+        // Core highlight
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(sx - 2, sy - 2, r * 0.4, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 1;
 
         // Icon (canvas-drawn shape)
         ctx.shadowBlur = 0;
@@ -2320,7 +2269,6 @@ function drawPowerUps() {
 
 // ─── Particles & Effects ────────────────────────────────────
 function drawParticles() {
-    if (isMobile) return; // Skip all particles on mobile to reduce alpha blending
     for (const p of parts) {
         const sx = p.x - cam.x, sy = p.y - cam.y;
         if (sx < -10 || sx > W + 10 || sy < -10 || sy > H + 10) continue;
@@ -2520,46 +2468,32 @@ function drawEdgeIndicators() {
 
 // ─── MAIN RENDER ────────────────────────────────────────────
 function render() {
-    resetCtxState();
     ctx.fillStyle = '#060612';
+    ctx.shadowBlur = 0; // safety reset every frame
+    ctx.shadowColor = 'transparent';
     ctx.fillRect(0, 0, W, H);
     drawBgStars();
-    if (isMobile) resetCtxState();
 
     ctx.save();
     if (shake > 0.5) ctx.translate(rand(-shake, shake), rand(-shake, shake));
 
     drawGrid();
-    if (isMobile) resetCtxState();
     drawMagnetRange();
-    if (isMobile) resetCtxState();
     drawPowerUps();
-    if (isMobile) resetCtxState();
     drawHealthOrbs();
-    if (isMobile) resetCtxState();
     drawGems();
-    if (isMobile) resetCtxState();
     drawNovas();
-    if (isMobile) resetCtxState();
     drawLightning();
-    if (isMobile) resetCtxState();
     drawEnemies();
-    if (isMobile) resetCtxState();
     drawProjectiles();
-    if (isMobile) resetCtxState();
     drawOrbiters();
-    if (isMobile) resetCtxState();
     drawParticles();
-    if (isMobile) resetCtxState();
     drawDmgNums();
-    if (isMobile) resetCtxState();
     drawPlayer();
-    if (isMobile) resetCtxState();
 
     ctx.restore();
 
     drawJoystick();
-    if (isMobile) resetCtxState();
 
     // Damage flash overlay (reduced on mobile)
     if (flashAlpha > 0) {
