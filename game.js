@@ -148,6 +148,9 @@ const DPR = isMobile ? Math.min(devicePixelRatio, 1) : 1;
 function resize() {
     W = innerWidth;
     H = innerHeight;
+    if (isMobile && window.visualViewport) {
+        H = Math.min(H, window.visualViewport.height);
+    }
     C.width  = W * DPR;
     C.height = H * DPR;
     C.style.width  = W + 'px';
