@@ -6,26 +6,60 @@
     <title>NEON SWARM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=19">
+    <link rel="stylesheet" href="style.css?v=24">
     <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 </head>
 <body>
     <canvas id="game"></canvas>
     <div class="vignette"></div>
+    <div id="hp-edge-glow"></div>
 
     <!-- HUD -->
     <div id="hud" style="display:none">
         <div id="hud-top">
-            <div id="hp-wrap"><div id="hp-bar"></div><span id="hp-text"></span></div>
+            <!-- LEFT: HP -->
+            <div id="hud-left">
+                <div id="hp-label">HP</div>
+                <div id="hp-wrap">
+                    <div id="hp-bar"></div>
+                    <span id="hp-text"></span>
+                </div>
+            </div>
+
+            <!-- CENTER: Score + Timer -->
             <div id="hud-center">
                 <div id="score-display">0</div>
-                <div id="timer">0:00</div>
-                <div id="best-score">BEST: 0</div>
+                <div id="hud-center-sub">
+                    <div id="timer">0:00</div>
+                    <div id="best-score">BEST: 0</div>
+                </div>
             </div>
-            <div id="kill-wrap"><div id="kill-count">💀 0 KILLS</div><button id="pause-btn">⏸</button></div>
+
+            <!-- RIGHT: kills + controls -->
+            <div id="hud-right">
+                <div id="kill-count">0</div>
+                <div id="hud-controls">
+                    <button id="mute-btn" title="Mute">🔊</button>
+                    <button id="fullscreen-btn" title="Fullscreen">⛶</button>
+                    <button id="pause-btn" title="Pause (P)">⏸</button>
+                </div>
+            </div>
         </div>
+
+        <!-- WEAPON ROW -->
         <div id="weapon-icons"></div>
+
+        <!-- THREAT BAR (bottom) -->
+        <div id="threat-wrap">
+            <div id="threat-label">THREAT</div>
+            <div id="threat-track">
+                <div id="threat-fill"></div>
+                <div id="threat-glow"></div>
+            </div>
+            <div id="threat-level">LV 1</div>
+        </div>
     </div>
+
     <div id="score-mult" style="display:none">x2 SCORE</div>
 
     <!-- Combo Display -->
@@ -34,6 +68,9 @@
         <div class="combo-label">COMBO</div>
         <div class="combo-bar"><div class="combo-fill" style="width:100%"></div></div>
     </div>
+
+    <!-- New Best flash -->
+    <div id="new-best-flash" style="display:none">★ NEW HIGH SCORE ★</div>
 
     <!-- Start Screen -->
     <div id="start-screen" class="overlay">
@@ -73,9 +110,19 @@
     <!-- Game Over Screen -->
     <div id="gameover-screen" class="overlay" style="display:none">
         <div class="overlay-content">
-            <h2 class="gameover-title">GAME OVER</h2>
+            <div id="new-best-banner" style="display:none">★ NEW High Score ★</div>
+            <h2 class="gameover-title">YOU DIED</h2>
+            <div class="death-survived">SURVIVED <span id="death-time">0:00</span></div>
+            <div class="death-score-block">
+                <div class="death-score-label">FINAL SCORE</div>
+                <div id="death-score">0</div>
+                <div id="death-best-line">BEST: 0</div>
+            </div>
             <div id="final-stats"></div>
-            <button class="glow-btn" id="retry-btn"><span class="btn-shimmer"></span>↻ RETRY</button>
+            <div class="gameover-btns">
+                <button class="glow-btn" id="retry-btn"><span class="btn-shimmer"></span>↻ PLAY AGAIN</button>
+                <button class="glow-btn secondary" id="menu-from-gameover-btn"><span class="btn-shimmer"></span>⌂ MAIN MENU</button>
+            </div>
         </div>
     </div>
 
@@ -87,6 +134,6 @@
         <div class="onboard-hint" id="onboard-text"></div>
     </div>
 
-    <script src="game.js?v=19"></script>
+    <script src="game.js?v=24"></script>
 </body>
 </html>

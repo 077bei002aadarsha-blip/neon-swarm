@@ -148,22 +148,43 @@ const C   = document.getElementById('game');
 const ctx = C.getContext('2d');
 let W, H;
 
-// On mobile, cap DPR to 1 to avoid rendering millions of extra pixels.
-// On desktop, use native 1:1 (canvas already matches CSS pixels).
-const DPR = isMobile ? Math.min(devicePixelRatio, 1) : 1;
+function getViewportSize() {
+    const vv = window.visualViewport;
+    const w = Math.floor(vv ? vv.width : innerWidth);
+    const h = Math.floor(vv ? vv.height : innerHeight);
+    return { w: Math.max(1, w), h: Math.max(1, h) };
+}
 
-function resize() {
-    W = innerWidth;
-    H = innerHeight;
-    C.width  = W * DPR;
-    C.height = H * DPR;
+function computeDpr() {
+    // On mobile, cap DPR to 1 to avoid rendering millions of extra pixels.
+    // On desktop, use native 1:1 (canvas already matches CSS pixels).
+    return isMobile ? Math.min(devicePixelRatio, 1) : 1;
+}
+
+let _resizeRaf = 0;
+function resizeNow() {
+    updateDeviceDetection();
+    const { w, h } = getViewportSize();
+    const dpr = computeDpr();
+
+    W = w;
+    H = h;
+    C.width  = Math.floor(W * dpr);
+    C.height = Math.floor(H * dpr);
     C.style.width  = W + 'px';
     C.style.height = H + 'px';
-    if (DPR !== 1) ctx.scale(DPR, DPR);
-    updateDeviceDetection();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
+
+function resize() {
+    cancelAnimationFrame(_resizeRaf);
+    _resizeRaf = requestAnimationFrame(resizeNow);
+}
+
 addEventListener('resize', resize);
-resize();
+addEventListener('orientationchange', resize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+resizeNow();
 
 const PI    = Math.PI;
 const TAU   = PI * 2;
@@ -507,6 +528,19 @@ const $skinPicker     = $('skin-picker');
 const $comboDisplay   = $('combo-display');
 const $comboCount     = document.querySelector('#combo-display .combo-count');
 const $comboFill      = document.querySelector('#combo-display .combo-fill');
+const $threatFill     = $('threat-fill');
+const $threatLevel    = $('threat-level');
+const $deathTime      = $('death-time');
+const $deathScore     = $('death-score');
+const $deathBest      = $('death-best-line');
+const $newBestBanner  = $('new-best-banner');
+const $newBestFlash   = $('new-best-flash');
+const $hpEdgeGlow     = $('hp-edge-glow');
+const $hpWrap         = $('hp-wrap');
+const $muteBtn        = $('mute-btn');
+const $fullscreenBtn  = $('fullscreen-btn');
+const $menuFromGameover = $('menu-from-gameover-btn');
+let isMuted = false;
 
 // ─── INPUT ──────────────────────────────────────────────────
 const keys = {};
@@ -770,6 +804,28 @@ $('quit-btn').onclick   = () => {
     $hud.style.display = 'none';
     $startScreen.style.display = '';
 };
+if ($menuFromGameover) $menuFromGameover.onclick = () => {
+    $gameoverScreen.style.display = 'none';
+    $startScreen.style.display = '';
+    state = 'menu';
+};
+if ($muteBtn) $muteBtn.onclick = () => {
+    isMuted = !isMuted;
+    if (actx) { if (isMuted) actx.suspend(); else actx.resume(); }
+    $muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    $muteBtn.style.color = isMuted ? '#ef4444' : '';
+};
+if ($fullscreenBtn) $fullscreenBtn.onclick = () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        $fullscreenBtn.textContent = '⛶'; // same icon; browser will handle UI
+    } else {
+        document.exitFullscreen().catch(() => {});
+    }
+};
+document.addEventListener('fullscreenchange', () => {
+    if ($fullscreenBtn) $fullscreenBtn.textContent = document.fullscreenElement ? '⊡' : '⛶';
+});
 
 function buildPauseSkinPicker() {
     const container = $('pause-skin-picker');
@@ -1239,17 +1295,26 @@ function die() {
     const isNewBest = score > best;
     if (isNewBest) { best = score; localStorage.setItem('ns_best', best); }
 
+    // Hide in-game new-best flash if visible
+    if ($newBestFlash) { $newBestFlash.style.display = 'none'; clearTimeout($newBestFlash._t); }
+
     setTimeout(() => {
         $hud.style.display = 'none';
         $gameoverScreen.style.display = '';
+
         const min = Math.floor(gt / 60);
         const sec = Math.floor(gt % 60);
+        const timeStr = min + ':' + String(sec).padStart(2, '0');
+
+        // Populate redesigned death screen elements
+        if ($deathTime)  $deathTime.textContent  = timeStr;
+        if ($deathScore) $deathScore.textContent  = score.toLocaleString();
+        if ($deathBest)  $deathBest.textContent   = 'BEST: ' + best.toLocaleString();
+        if ($newBestBanner) $newBestBanner.style.display = isNewBest ? '' : 'none';
+
         $finalStats.innerHTML = `
-            <div class="stat-row"><span class="stat-label">SCORE</span><span class="stat-value ${isNewBest ? 'new-best' : ''}" style="font-size:22px">${score.toLocaleString()}${isNewBest ? ' ★ NEW BEST' : ''}</span></div>
-            <div class="stat-row"><span class="stat-label">Time Survived</span><span class="stat-value">${min}:${String(sec).padStart(2, '0')}</span></div>
-            <div class="stat-row"><span class="stat-label">Enemies Killed</span><span class="stat-value">${kills}</span></div>
-            <div class="stat-row"><span class="stat-label">Max Combo</span><span class="stat-value">${maxCombo}x</span></div>
-            <div class="stat-row"><span class="stat-label">Best Score</span><span class="stat-value">${best.toLocaleString()}</span></div>
+            <div class="stat-row"><span class="stat-label">ENEMIES KILLED</span><span class="stat-value">${kills}</span></div>
+            <div class="stat-row"><span class="stat-label">MAX COMBO</span><span class="stat-value">${maxCombo}x</span></div>
         `;
     }, 800);
 }
@@ -1529,32 +1594,47 @@ function updateLightFx() {
 
 // ─── HUD ────────────────────────────────────────────────────
 function updateHUD() {
-    // HP bar
+    // HP bar – use CSS class tiers instead of inline styles
     const hpPct = Math.max(0, P.hp / P.maxHp * 100);
     $hpBar.style.width = hpPct + '%';
     $hpText.textContent = Math.ceil(P.hp) + ' / ' + P.maxHp;
 
-    if (hpPct < 25) {
-        $hpBar.style.background = 'linear-gradient(90deg,#991b1b,#dc2626,#ef4444)';
-        $hpBar.style.animation = 'hpShimmer 0.5s linear infinite';
-    } else {
-        $hpBar.style.background = '';
-        $hpBar.style.animation = '';
-    }
+    $hpWrap.classList.toggle('hp-low', hpPct < 30);
+    $hpWrap.classList.toggle('hp-mid', hpPct >= 30 && hpPct < 60);
+
+    // Red edge vignette at low HP
+    if ($hpEdgeGlow) $hpEdgeGlow.classList.toggle('active', hpPct < 30);
 
     // Score
     $score.textContent = score.toLocaleString();
     if (score !== lastScore) {
         $score.classList.add('score-bump');
         setTimeout(() => $score.classList.remove('score-bump'), 150);
+
+        // NEW HIGH SCORE in-game flash
+        if (score > best && $newBestFlash) {
+            $newBestFlash.style.display = '';
+            clearTimeout($newBestFlash._t);
+            $newBestFlash._t = setTimeout(() => { $newBestFlash.style.display = 'none'; }, 2500);
+        }
+
         lastScore = score;
     }
 
-    // Timer & kills
+    // Best score sub-label
+    $bestScore.textContent = 'BEST: ' + best.toLocaleString();
+
+    // Timer & kills (emoji on kill-count handled by CSS ::before)
     const min = Math.floor(gt / 60);
     const sec = Math.floor(gt % 60);
     $timer.textContent = min + ':' + String(sec).padStart(2, '0');
-    $kills.textContent = '💀 ' + kills;
+    $kills.textContent = kills;
+
+    // Threat bar (fills over first 10 minutes of play)
+    const threatPct = Math.min(100, (gt / 600) * 100);
+    if ($threatFill) $threatFill.style.width = threatPct + '%';
+    const threatLv = Math.floor(gt / 60) + 1;
+    if ($threatLevel) $threatLevel.textContent = 'LV ' + threatLv;
 
     // Score milestones
     for (let i = scoreMilestones.length - 1; i >= 0; i--) {
@@ -1562,11 +1642,10 @@ function updateHUD() {
             sndMilestone();
             shake = 8;
             const el = document.createElement('div');
-            el.className = 'score-fly';
-            Object.assign(el.style, { top: '35%', left: '50%', transform: 'translateX(-50%)', fontSize: '24px', color: '#fbbf24' });
+            el.className = 'milestone-banner';
             el.textContent = '★ ' + scoreMilestones[i].toLocaleString() + ' POINTS! ★';
             document.body.appendChild(el);
-            setTimeout(() => el.remove(), 1200);
+            setTimeout(() => el.remove(), 1800);
             scoreMilestones.splice(i, 1);
             break;
         }
