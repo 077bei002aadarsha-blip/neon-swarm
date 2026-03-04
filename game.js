@@ -367,7 +367,7 @@ function drawIconShape(x, y, type, r, col) {
 
 /** Draw icon on a small HUD canvas (separate context). */
 function drawIconOnMini(mCtx, type, x, y, r, col) {
-    mCtx.clearRect(0, 0, 28, 28);
+    mCtx.clearRect(0, 0, mCtx.canvas.width, mCtx.canvas.height);
     mCtx.fillStyle = col;
     mCtx.strokeStyle = col;
     mCtx.lineWidth = 1.5;
@@ -1615,7 +1615,7 @@ function updateHUD() {
         if (score > best && $newBestFlash) {
             $newBestFlash.style.display = '';
             clearTimeout($newBestFlash._t);
-            $newBestFlash._t = setTimeout(() => { $newBestFlash.style.display = 'none'; }, 2500);
+            $newBestFlash._t = setTimeout(() => { $newBestFlash.style.display = 'none'; }, 1200);
         }
 
         lastScore = score;
@@ -1685,14 +1685,14 @@ function updateHUD() {
     let html = '';
     for (const w of weapons) {
         const def = WDEFS[w.type];
-        html += `<div class="weapon-icon" style="border-color:${def.col};box-shadow:0 0 10px ${def.col}33"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="28" height="28"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
+        html += `<div class="weapon-icon" style="border-color:${def.col};box-shadow:0 0 8px ${def.col}33"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="34" height="34"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
     }
     $wIcons.innerHTML = html;
     // Draw icons on mini canvases
     $wIcons.querySelectorAll('.wicon-cvs').forEach(cvs => {
         const mCtx = cvs.getContext('2d');
         const t = cvs.dataset.type, c = cvs.dataset.col;
-        drawIconOnMini(mCtx, t, 14, 14, 9, c);
+        drawIconOnMini(mCtx, t, 17, 17, 12, c);
     });
 }
 
