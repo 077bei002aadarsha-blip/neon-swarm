@@ -1609,7 +1609,8 @@ function updateHUD() {
     let html = '';
     for (const w of weapons) {
         const def = WDEFS[w.type];
-        html += `<div class="weapon-icon" style="border-color:${def.col};box-shadow:0 0 10px ${def.col}33"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="28" height="28"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
+        const glowStyle = isMobile ? '' : `box-shadow:0 0 10px ${def.col}33`;
+        html += `<div class="weapon-icon" style="border-color:${def.col};${glowStyle}"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="28" height="28"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
     }
     $wIcons.innerHTML = html;
     // Draw icons on mini canvases
