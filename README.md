@@ -2,7 +2,7 @@
 
 A Vampire Survivors-inspired auto-battler built from scratch with **vanilla HTML5 Canvas and JavaScript** — no frameworks, no libraries, no build tools. Just raw code.
 
-**[Play it live →](#)** *(coming soon)*
+**[🎮 Play it live on Game Jolt →](https://gamejolt.com/games/neon-swarm/1054561)**
 
 ![Neon Swarm](https://img.shields.io/badge/Made%20With-HTML5%20Canvas-orange?style=flat-square)
 ![JavaScript](https://img.shields.io/badge/JavaScript-Vanilla-yellow?style=flat-square)
