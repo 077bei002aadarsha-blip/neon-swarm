@@ -10,7 +10,17 @@ A Vampire Survivors-inspired auto-battler built from scratch with **vanilla HTML
 
 ---
 
-## 🎮 Gameplay
+## � Gameplay Preview
+
+https://github.com/user-attachments/assets/NeonSwark.mp4
+
+<video src="NeonSwark.mp4" width="100%" autoplay loop muted playsinline></video>
+
+*22 seconds of neon chaos*
+
+---
+
+## �🎮 Gameplay
 
 You're a lone survivor in a neon void, surrounded by endless waves of enemies. Your weapons fire automatically — your only job is to **move, dodge, and survive** as long as you can.
 
