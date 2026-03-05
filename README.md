@@ -7,20 +7,11 @@ A Vampire Survivors-inspired auto-battler built from scratch with **vanilla HTML
 ![Neon Swarm](https://img.shields.io/badge/Made%20With-HTML5%20Canvas-orange?style=flat-square)
 ![JavaScript](https://img.shields.io/badge/JavaScript-Vanilla-yellow?style=flat-square)
 ![No Dependencies](https://img.shields.io/badge/Dependencies-None-brightgreen?style=flat-square)
+![CrazyGames SDK](https://img.shields.io/badge/CrazyGames-SDK%20v3-blueviolet?style=flat-square)
 
 ---
 
-## � Gameplay Preview
-
-https://github.com/user-attachments/assets/NeonSwark.mp4
-
-<video src="NeonSwark.mp4" width="100%" autoplay loop muted playsinline></video>
-
-*22 seconds of neon chaos*
-
----
-
-## �🎮 Gameplay
+## 🎮 Gameplay
 
 You're a lone survivor in a neon void, surrounded by endless waves of enemies. Your weapons fire automatically — your only job is to **move, dodge, and survive** as long as you can.
 
@@ -89,13 +80,24 @@ Then open `http://localhost:8080` in your browser.
 ## 🗂 Project Structure
 
 ```
-├── index.html    # Game HTML structure + HUD elements
-├── style.css     # Full visual styling, animations, responsive design
-├── game.js       # Complete game engine (~2000 lines)
-└── README.md
+neon-swarm/
+├── index.html        # Game entry point
+├── game.js           # Complete game engine (~2600 lines)
+├── style.css         # Styling + animations + responsive design
+├── README.md         # Documentation
+├── LICENSE           # MIT License
+├── .gitignore
+└── docs/             # Media & screenshots
+    ├── header.png    # Cover image
+    ├── NeonSwark.mp4 # Gameplay video
+    └── screenshots/
+        ├── menu.png
+        ├── gameplay.png
+        ├── gameplay2.png
+        └── gameover.png
 ```
 
-**Zero dependencies.** No `node_modules`, no `package.json`, no bundler. Just 3 files.
+**Zero dependencies.** No `node_modules`, no `package.json`, no bundler.
 
 ## 🎯 Controls
 
@@ -109,15 +111,15 @@ Everything else is automatic.
 ## 📸 Screenshots
 
 ### Start Screen
-![Menu](screenshots/menu.png)
+![Menu](docs/screenshots/menu.png)
 
 ### Gameplay
-![Gameplay](screenshots/gameplay.png)
+![Gameplay](docs/screenshots/gameplay.png)
 
-![Gameplay 2](screenshots/gameplay2.png)
+![Gameplay 2](docs/screenshots/gameplay2.png)
 
 ### Game Over
-![Game Over](screenshots/gameover.png)
+![Game Over](docs/screenshots/gameover.png)
 
 ## 🛠 Technical Highlights
 

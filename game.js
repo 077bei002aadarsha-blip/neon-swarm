@@ -13,6 +13,10 @@ let cgSDK = null;
             cgSDK = window.CrazyGames.SDK;
             await cgSDK.init();
             console.log('[CG SDK] Initialized');
+            
+            // Signal loading has started
+            try { cgSDK.game.loadingStart(); } catch (_) {}
+            
             updateDeviceDetection();
 
             // Listen for SDK pause/resume (e.g. during ads) to mute/unmute audio
@@ -432,6 +436,7 @@ let scoreMult      = 1;
 let scoreMultTimer = 0;
 let combo = 0, comboTimer = 0, maxCombo = 0;
 let lastScore = 0, heartbeatTimer = 0;
+let triggeredNewBestHappy = false; // Track if happytime was triggered this session
 let scoreMilestones = [1000, 2500, 5000, 10000, 25000, 50000, 100000];
 
 // ─── DOM REFS ───────────────────────────────────────────────
@@ -641,6 +646,7 @@ function initGame() {
     scoreMultTimer = 0;
     combo = 0; comboTimer = 0; maxCombo = 0;
     lastScore = 0; heartbeatTimer = 0;
+    triggeredNewBestHappy = false;
 
     // First 30s hook: spawn initial wave immediately so action starts instantly
     for (let i = 0; i < 5; i++) spawnEnemy('walker');
@@ -1217,7 +1223,12 @@ function die() {
     });
 
     const isNewBest = score > best;
-    if (isNewBest) { best = score; localStorage.setItem('ns_best', best); }
+    if (isNewBest) {
+        best = score;
+        localStorage.setItem('ns_best', best);
+        // CrazyGames SDK: happytime() for achievement celebration
+        if (cgSDK) try { cgSDK.game.happytime(); } catch (_) {}
+    }
 
     // Hide in-game new-best flash if visible
     if ($newBestFlash) { $newBestFlash.style.display = 'none'; clearTimeout($newBestFlash._t); }
@@ -1540,6 +1551,11 @@ function updateHUD() {
             $newBestFlash.style.display = '';
             clearTimeout($newBestFlash._t);
             $newBestFlash._t = setTimeout(() => { $newBestFlash.style.display = 'none'; }, 1200);
+            // CrazyGames SDK: happytime on first new best of this session
+            if (!triggeredNewBestHappy) {
+                triggeredNewBestHappy = true;
+                if (cgSDK) try { cgSDK.game.happytime(); } catch (_) {}
+            }
         }
 
         lastScore = score;
@@ -2571,6 +2587,17 @@ function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
 }
 
+// CrazyGames SDK: signal loading complete when game is ready
+function notifyLoadingComplete() {
+    if (cgSDK) {
+        try {
+            cgSDK.game.loadingStop();
+            console.log('[CG SDK] Loading complete');
+        } catch (_) {}
+    }
+}
+
 // Boot
 initGame();
+notifyLoadingComplete();
 requestAnimationFrame(gameLoop);
