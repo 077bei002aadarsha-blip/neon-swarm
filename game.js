@@ -365,79 +365,6 @@ function drawIconShape(x, y, type, r, col) {
     ctx.restore();
 }
 
-/** Draw icon on a small HUD canvas (separate context). */
-function drawIconOnMini(mCtx, type, x, y, r, col) {
-    mCtx.clearRect(0, 0, mCtx.canvas.width, mCtx.canvas.height);
-    mCtx.fillStyle = col;
-    mCtx.strokeStyle = col;
-    mCtx.lineWidth = 1.5;
-    mCtx.lineCap = 'round';
-    mCtx.lineJoin = 'round';
-    const T = Math.PI * 2;
-    switch (type) {
-        case 'orbiter':
-            mCtx.beginPath();
-            mCtx.moveTo(x - r, y - r); mCtx.lineTo(x + r, y + r);
-            mCtx.moveTo(x + r, y - r); mCtx.lineTo(x - r, y + r);
-            mCtx.stroke();
-            mCtx.beginPath(); mCtx.arc(x, y, r * 0.25, 0, T); mCtx.fill();
-            break;
-        case 'bolt':
-            mCtx.beginPath();
-            mCtx.moveTo(x, y - r); mCtx.lineTo(x + r * 0.6, y);
-            mCtx.lineTo(x, y + r); mCtx.lineTo(x - r * 0.6, y);
-            mCtx.closePath(); mCtx.fill();
-            break;
-        case 'nova':
-            mCtx.beginPath();
-            for (let i = 0; i < 8; i++) {
-                const a = (T / 8) * i - Math.PI / 2;
-                const rr = i % 2 === 0 ? r : r * 0.45;
-                i === 0 ? mCtx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr)
-                        : mCtx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-            }
-            mCtx.closePath(); mCtx.fill();
-            break;
-        case 'lightning':
-            mCtx.lineWidth = 2;
-            mCtx.beginPath();
-            mCtx.moveTo(x - r * 0.2, y - r);
-            mCtx.lineTo(x + r * 0.4, y - r * 0.2);
-            mCtx.lineTo(x - r * 0.15, y + r * 0.1);
-            mCtx.lineTo(x + r * 0.3, y + r);
-            mCtx.stroke();
-            break;
-        case 'missile':
-            mCtx.beginPath();
-            mCtx.moveTo(x, y - r); mCtx.lineTo(x + r * 0.5, y + r * 0.4);
-            mCtx.lineTo(x + r * 0.15, y + r * 0.2); mCtx.lineTo(x + r * 0.15, y + r);
-            mCtx.lineTo(x - r * 0.15, y + r); mCtx.lineTo(x - r * 0.15, y + r * 0.2);
-            mCtx.lineTo(x - r * 0.5, y + r * 0.4);
-            mCtx.closePath(); mCtx.fill();
-            break;
-        case 'scatter':
-            for (let i = -1; i <= 1; i++) {
-                mCtx.beginPath();
-                mCtx.arc(x + i * r * 0.55, y + Math.abs(i) * r * 0.3, r * 0.25, 0, T);
-                mCtx.fill();
-            }
-            break;
-        case 'pierce':
-            mCtx.beginPath();
-            mCtx.moveTo(x + r, y); mCtx.lineTo(x - r * 0.6, y - r * 0.7);
-            mCtx.lineTo(x - r * 0.6, y + r * 0.7); mCtx.closePath(); mCtx.fill();
-            break;
-        case 'rapid':
-            for (let i = 0; i < 3; i++) {
-                mCtx.beginPath();
-                mCtx.arc(x, y + (i - 1) * r * 0.65, r * 0.25, 0, T); mCtx.fill();
-            }
-            break;
-        default:
-            mCtx.beginPath(); mCtx.arc(x, y, r * 0.5, 0, T); mCtx.fill();
-    }
-}
-
 // ─── WEAPON DEFINITIONS (5 levels each, index 0-4) ──────────
 const WDEFS = {
     orbiter: {
@@ -517,7 +444,6 @@ const $bestScore      = $('best-score');
 const $scoreMult      = $('score-mult');
 const $timer          = $('timer');
 const $kills          = $('kill-count');
-const $wIcons         = $('weapon-icons');
 const $startScreen    = $('start-screen');
 const $gameoverScreen = $('gameover-screen');
 const $finalStats     = $('final-stats');
@@ -528,8 +454,6 @@ const $skinPicker     = $('skin-picker');
 const $comboDisplay   = $('combo-display');
 const $comboCount     = document.querySelector('#combo-display .combo-count');
 const $comboFill      = document.querySelector('#combo-display .combo-fill');
-const $threatFill     = $('threat-fill');
-const $threatLevel    = $('threat-level');
 const $deathTime      = $('death-time');
 const $deathScore     = $('death-score');
 const $deathBest      = $('death-best-line');
@@ -1630,12 +1554,6 @@ function updateHUD() {
     $timer.textContent = min + ':' + String(sec).padStart(2, '0');
     $kills.textContent = '☠ ' + kills;
 
-    // Threat bar (fills over first 10 minutes of play)
-    const threatPct = Math.min(100, (gt / 600) * 100);
-    if ($threatFill) $threatFill.style.width = threatPct + '%';
-    const threatLv = Math.floor(gt / 60) + 1;
-    if ($threatLevel) $threatLevel.textContent = 'LV ' + threatLv;
-
     // Score milestones
     for (let i = scoreMilestones.length - 1; i >= 0; i--) {
         if (score >= scoreMilestones[i]) {
@@ -1680,20 +1598,6 @@ function updateHUD() {
             heartbeatTimer = CFG.HEARTBEAT_INTERVAL;
         }
     }
-
-    // Weapon icons (canvas-based SVG inline)
-    let html = '';
-    for (const w of weapons) {
-        const def = WDEFS[w.type];
-        html += `<div class="weapon-icon" style="border-color:${def.col}"><canvas class="wicon-cvs" data-type="${w.type}" data-col="${def.col}" width="32" height="32"></canvas><span class="wlv">${w.lv + 1}</span></div>`;
-    }
-    $wIcons.innerHTML = html;
-    // Draw icons on mini canvases
-    $wIcons.querySelectorAll('.wicon-cvs').forEach(cvs => {
-        const mCtx = cvs.getContext('2d');
-        const t = cvs.dataset.type, c = cvs.dataset.col;
-        drawIconOnMini(mCtx, t, 16, 16, 10, c);
-    });
 }
 
 // ─── MAIN UPDATE ────────────────────────────────────────────
